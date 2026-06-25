@@ -1,0 +1,142 @@
+# Sentinel-LIO ROBIO benchmark plan.
+#
+# This file is intentionally a template: keep raw public datasets outside git,
+# export trajectories/masks into the paths below, then run the scripts in
+# evaluation_tools.
+
+project:
+  name: sentinel_lio_robio
+  results_root: evaluation_tools/results
+  protocol_doc: SLAM_EVAL_PROTOCOL_CN.md
+
+evaluation_protocol:
+  separation:
+    main_slam_task: "ROS2 bag replay -> online SLAM -> trajectory/map/runtime metrics"
+    upstream_prior_task: "depth/reflection prior accuracy only; evaluated separately on 3DRef"
+  benchmark_basis:
+    trajectory:
+      - TUM_RGBD_ATE_RPE
+      - KITTI_odometry_segment_drift
+      - Hilti_style_failure_rate
+    mapping:
+      - reconstruction_precision_recall_fscore
+      - cloud_to_reference_distance
+      - local_plane_thickness
+    runtime:
+      - SLAMBench_style_fps_latency
+  thresholds_m:
+    map_fscore: [0.05, 0.10, 0.20]
+    plane_thickness: [0.05, 0.10, 0.20]
+    ghost_behind_plane_margin: [0.02, 0.05, 0.10]
+  primary_main_slam_metrics:
+    - ghost_rate
+    - behind_plane_point_count
+    - plane_thickness_p95
+    - loop_drift_ratio
+    - runtime_mean_ms
+  gt_trajectory_metrics:
+    - ate_rmse
+    - rpe_trans_rmse
+    - rpe_rot_mean_deg
+    - failure_rate
+  upstream_aux_metrics:
+    - iou
+    - f1
+    - precision
+    - recall
+    - fps
+
+mirror_glass_slam:
+  # Main paper evidence. These are ROS2 Humble bags with LiDAR/IMU/image streams.
+  dataset: self_collected_mirror_glass_ros2
+  bag_root: dataset/rosbag2
+  annotation_root: evaluation_tools/data/annotations/self_collected
+  result_root: evaluation_tools/results/slam/self_collected
+  required_topics:
+    lidar: /ouster/points
+    imu: /ouster/imu
+    left_image: /zed2/zed_node/left/image_rect_color
+    right_image: /zed2/zed_node/right/image_rect_color
+  recommended_topics:
+    left_camera_info: /zed2/zed_node/left/camera_info
+    right_camera_info: /zed2/zed_node/right/camera_info
+    tf: /tf
+    tf_static: /tf_static
+  prototype_sequences:
+    - name: 2026-03-30-21-31-03_rescued
+      bag: dataset/rosbag2/2026-03-30-21-31-03_rescued
+      annotation: evaluation_tools/data/annotations/self_collected/2026-03-30-21-31-03_rescued.yaml
+      role: prototype_pipeline_validation
+      note: "Rescued from old damaged-index bag; ROS2 Humble readable; not the only paper sequence."
+  target_sequences:
+    - mirror_corridor_01
+    - glass_wall_01
+    - mixed_reflection_01
+    - normal_indoor_01
+  methods:
+    - fast_lio2_equiv
+    - sentinel_no_mask
+    - sentinel_no_depth
+    - sentinel_hard_reject
+    - sentinel_full
+  optional_methods:
+    - lio_sam_ros2
+
+public_slam:
+  # Public difficult-SLAM generalization only. Not the mirror/glass main benchmark.
+  dataset: M2DGR
+  raw_root: dataset/public/M2DGR
+  tum_groundtruth_root: evaluation_tools/data/m2dgr/groundtruth_tum
+  exported_estimate_root: evaluation_tools/results/m2dgr/trajectories
+  eval_root: evaluation_tools/results/m2dgr/eval
+  max_difference: 0.02
+  sequences:
+    - hall_01
+    - hall_02
+    - lift_01
+    - door_01
+    - room_01
+  methods:
+    - fast_lio2
+    - lio_sam
+    - sentinel_no_mask
+    - sentinel_no_depth
+    - sentinel_full
+
+reflection_benchmark:
+  # Upstream prior auxiliary experiment only. Not the online SLAM main benchmark.
+  dataset: 3DRef
+  raw_root: dataset/public/3DRef/reflection
+  pred_root: evaluation_tools/results/3dref/predictions
+  eval_root: evaluation_tools/results/3dref/eval
+  splits:
+    - name: mirror
+      gt_dir: dataset/public/3DRef/reflection/rgb/mirror/test/mask
+      pred_dir: evaluation_tools/results/3dref/predictions/mirror
+    - name: glass
+      gt_dir: dataset/public/3DRef/reflection/rgb/glass/test/mask
+      pred_dir: evaluation_tools/results/3dref/predictions/glass
+    - name: others
+      gt_dir: dataset/public/3DRef/reflection/rgb/others/test/mask
+      pred_dir: evaluation_tools/results/3dref/predictions/others
+    - name: alllabel
+      gt_dir: dataset/public/3DRef/reflection/rgb/alllabel/test/mask
+      pred_dir: evaluation_tools/results/3dref/predictions/alllabel
+
+real_world:
+  # Deprecated compatibility block. Use mirror_glass_slam above for the main protocol.
+  dataset: self_collected
+  raw_bag: dataset/rosbag/2026-03-30-21-31-03.bag
+  exported_estimate_root: evaluation_tools/results/self_collected/trajectories
+  eval_root: evaluation_tools/results/self_collected/eval
+  scene_name: 2026-03-30-21-31-03
+  methods:
+    - fast_lio2
+    - sentinel_no_mask
+    - sentinel_no_depth
+    - sentinel_full
+  no_gt_metrics:
+    - loop_closure_drift
+    - revisit_consistency
+    - trajectory_length
+    - runtime_stats

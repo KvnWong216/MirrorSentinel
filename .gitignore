@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# ROS2 / build artifacts
+/Sentinal-LIO_ws/build/
+/Sentinal-LIO_ws/install/
+/Sentinal-LIO_ws/log/
+/Sentinal-LIO_ws/.colcon/
+/Sentinal-LIO_ws/models/
+/Sentinal-LIO_ws/src/sentinel_lio/PCD/*.pcd
+/Sentinal-LIO_ws/src/sentinel_lio/PCD/*
+/Sentinal-LIO_ws/src/sentinel_lio/doc/*.gif
+/Sentinal-LIO_ws/src/sentinel_lio/doc/
+/Sentinal-LIO_ws/src/sentinel_lio/Log/*.txt
+
+# Experiment outputs
+/evaluation_tools/results/
+/evaluation_tools/data/mask_priors/
+/evaluation_tools/**/build/
+*.pcd
+*.ply
+*.db3
+*.mcap
+
+# Local datasets and checkpoints
+/dataset/rosbag/
+/dataset/rosbag2/
+/dataset/public/
+/dataset/reconstruction/
+/third_party/
+/baselines/
+*.bag
+*.ckpt
+*.pth
+*.pt
+*.onnx
+*.engine
+*.plan
+*.bin
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+
+# Local editor / runtime noise
+.vscode/
+.ros/
+.codex
+*.log
+
+# Paper/private drafts
+**/MirrorSentinel_paper.tex

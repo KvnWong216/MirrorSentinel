@@ -1,0 +1,17 @@
+build/
+install/
+log/
+
+build_*/
+install_*/
+log_*/
+
+devel/
+.catkin_workspace
+.colcon/
+
+__pycache__/
+*.py[cod]
+
+.ros/
+PCD/*.pcd

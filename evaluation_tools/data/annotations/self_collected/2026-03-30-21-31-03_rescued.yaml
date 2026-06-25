@@ -1,0 +1,103 @@
+thresholds_m:
+- 0.05
+- 0.1
+- 0.2
+room_bounds:
+  type: cuboid
+  floor_corners_xy:
+  - - 1.236117657054482
+    - -0.882435422357772
+  - - 3.6378597623314004
+    - -1.037386525924024
+  - - 3.7308304244711525
+    - 0.37266851652887567
+  - - 1.344583429550859
+    - 0.5431147304517534
+  z:
+  - -0.3
+  - 2.2
+  wall_types:
+  - mirror
+  - mirror
+  - mirror
+  - mirror
+  floor_type: floor
+  ceiling_type: ceiling
+  interior_margin_m: 0.25
+  exterior_margin_m: 1.2
+  thresholds_m:
+  - 0.05
+  - 0.1
+  - 0.2
+  bottom_corners:
+  - - 1.236117657054482
+    - -0.882435422357772
+    - -0.3
+  - - 3.6378597623314004
+    - -1.037386525924024
+    - -0.3
+  - - 3.7308304244711525
+    - 0.37266851652887567
+    - -0.3
+  - - 1.344583429550859
+    - 0.5431147304517534
+    - -0.3
+  top_corners:
+  - - 1.236117657054482
+    - -0.882435422357772
+    - 2.2
+  - - 3.6378597623314004
+    - -1.037386525924024
+    - 2.2
+  - - 3.7308304244711525
+    - 0.37266851652887567
+    - 2.2
+  - - 1.344583429550859
+    - 0.5431147304517534
+    - 2.2
+  faces:
+  - id: wall_0
+    type: mirror
+    corner_indices:
+    - 0
+    - 1
+    - 5
+    - 4
+  - id: wall_1
+    type: mirror
+    corner_indices:
+    - 1
+    - 2
+    - 6
+    - 5
+  - id: wall_2
+    type: mirror
+    corner_indices:
+    - 2
+    - 3
+    - 7
+    - 6
+  - id: wall_3
+    type: mirror
+    corner_indices:
+    - 3
+    - 0
+    - 4
+    - 7
+  - id: floor
+    type: floor
+    corner_indices:
+    - 0
+    - 1
+    - 2
+    - 3
+  - id: ceiling
+    type: ceiling
+    corner_indices:
+    - 4
+    - 5
+    - 6
+    - 7
+sequence: 2026-03-30-21-31-03_rescued
+bag: dataset/rosbag2/2026-03-30-21-31-03_rescued
+map_frame: camera_init

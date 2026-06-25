@@ -1,0 +1,105 @@
+laserMapping:
+  ros__parameters:
+    common.lid_topic: /ouster/points
+    common.imu_topic: /ouster/imu
+    common.time_sync_en: false
+    common.time_offset_lidar_to_imu: 0.0
+
+    preprocess.lidar_type: 3
+    preprocess.scan_line: 64
+    preprocess.scan_rate: 10
+    preprocess.timestamp_unit: 3
+    preprocess.blind: 0.5
+
+    mapping.acc_cov: 0.1
+    mapping.gyr_cov: 0.1
+    mapping.b_acc_cov: 0.0001
+    mapping.b_gyr_cov: 0.0001
+    mapping.fov_degree: 360.0
+    mapping.det_range: 100.0
+    mapping.extrinsic_est_en: true
+    mapping.extrinsic_T: [0.0, 0.0, 0.0]
+    mapping.extrinsic_R: [1.0, 0.0, 0.0,
+                          0.0, 1.0, 0.0,
+                          0.0, 0.0, 1.0]
+
+    publish.path_en: true
+    publish.scan_publish_en: true
+    publish.dense_publish_en: false
+    publish.scan_bodyframe_pub_en: false
+
+    pcd_save.pcd_save_en: false
+    pcd_save.interval: -1
+
+    feature_extract_enable: false
+    point_filter_num: 4
+    max_iteration: 3
+    filter_size_surf: 0.5
+    filter_size_map: 0.5
+    cube_side_length: 1000.0
+    runtime_pos_log_enable: false
+    map_file_path: ""
+
+    sentinel.depth_diff_threshold: 0.5
+    sentinel.ego_vel_threshold: 0.1
+    sentinel.use_depth_consistency: true
+    sentinel.depth_sigma_abs: 0.15
+    sentinel.depth_sigma_rel: 0.04
+    sentinel.ghost_margin_abs: 0.15
+    sentinel.ghost_margin_rel: 0.02
+    sentinel.confidence_floor: 0.05
+    sentinel.mirror_surface_confidence: 0.35
+    sentinel.mask_boundary_confidence: 0.50
+    sentinel.invalid_depth_confidence: 0.80
+    sentinel.reflective_invalid_depth_confidence: 0.15
+    sentinel.map_depth_gate_enable: true
+    sentinel.map_mask_gate_enable: true
+    sentinel.map_depth_ghost_margin_abs: 0.80
+    sentinel.map_depth_ghost_margin_rel: 0.03
+    sentinel.map_mask_foreground_keep_margin: 0.20
+    sentinel.map_mask_require_depth_confirmation: true
+    sentinel.map_mask_invalid_depth_reject: false
+    sentinel.map_depth_require_calibration: true
+    sentinel.map_gate_apply_to_ikdtree: false
+    sentinel.map_history_cleanup_enable: false
+    sentinel.map_accumulated_cleanup_enable: false
+    sentinel.map_history_cleanup_period: 10
+    sentinel.map_history_cleanup_range: 8.0
+    sentinel.map_history_cleanup_export_radius: 0.35
+    sentinel.map_export_ikdtree: false
+    sentinel.map_export_apply_history_cleanup: false
+    sentinel.global_depth_prior_enable: false
+    sentinel.frontend_confidence_enable: false
+    sentinel.rgb_subscribe_enable: false
+    sentinel.depth_calibration_enable: true
+    sentinel.depth_calibration_use_non_mask: true
+    sentinel.depth_calibration_min_points: 50
+    sentinel.depth_calibration_scale_min: 0.50
+    sentinel.depth_calibration_scale_max: 2.00
+    sentinel.depth_calibration_max_raw_residual: 1.50
+    sentinel.mask_erode_kernel: 5
+    sentinel.mask_boundary_band: 0
+    sentinel.mask_threshold: 127.0
+    sentinel.stats_enable: true
+    sentinel.explicit_mask_enable: true
+    sentinel.mask_ab_mode: 0
+    sentinel.mask_ab_period: 30
+    sentinel.stats_topic: /mirror_sentinel/frame_stats
+    sentinel.mask_topic: /vfm/mirror_mask
+    sentinel.depth_topic: /vfm/depth_image
+    sentinel.rgb_topic: /zed2/zed_node/left/image_rect_color
+    sentinel.mask_viz_topic: /mirror_sentinel/mask_viz
+    sentinel.mask_viz_frame_id: camera_init
+    sentinel.mask_overlay_topic: /mirror_sentinel/mask_overlay
+
+    sentinel.camera_matrix.fx: 541.56
+    sentinel.camera_matrix.fy: 541.56
+    sentinel.camera_matrix.cx: 496.91
+    sentinel.camera_matrix.cy: 264.66
+    sentinel.image_width: 960
+    sentinel.image_height: 540
+
+    sentinel.extrinsic_R: [0.002206, -0.999960, -0.008599,
+                           0.114916,  0.008795, -0.993336,
+                           0.993372,  0.001203,  0.114931]
+    sentinel.extrinsic_t: [0.096, -0.097, -0.010]
