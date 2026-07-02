@@ -170,6 +170,17 @@ class DA3DepthRunner:
 
     def _infer_module(self, rgb: np.ndarray) -> np.ndarray:
         model = self.model
+        if hasattr(model, "inference"):
+            prediction = model.inference(
+                image=[rgb],
+                process_res=max(int(self.config.input_width), int(self.config.input_height)),
+                process_res_method="upper_bound_resize",
+            )
+            if isinstance(prediction, dict):
+                depth = prediction.get("depth", next(iter(prediction.values())))
+            else:
+                depth = getattr(prediction, "depth", prediction)
+            return np.asarray(depth).squeeze()
         if hasattr(model, "infer_image"):
             return model.infer_image(rgb)
         if hasattr(model, "infer"):

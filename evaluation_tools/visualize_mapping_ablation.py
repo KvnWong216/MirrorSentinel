@@ -69,9 +69,19 @@ def load_metrics(result_dir: Path, label: str) -> Optional[Dict[str, float]]:
             return {
                 "point_count": float(data.get("point_count", 0.0)),
                 "roi": float(aggregate.get("reflective_roi_point_count", 0.0)),
-                "behind": float(aggregate.get("behind_plane_point_count", 0.0)),
-                "ghost_rate": float(aggregate.get("ghost_rate", 0.0)),
-                "thickness": float(aggregate.get("reflective_plane_thickness_p95_mean_m", 0.0)),
+                "residual": float(
+                    aggregate.get("reflection_residual_points", aggregate.get("behind_plane_point_count", 0.0))
+                ),
+                "residual_rate": float(
+                    aggregate.get("reflection_residual_rate", aggregate.get("ghost_rate", 0.0))
+                ),
+                "valid_precision": float(aggregate.get("valid_structure_precision_proxy", 0.0)),
+                "thickness": float(
+                    aggregate.get(
+                        "reflective_plane_thickness_p95_m",
+                        aggregate.get("reflective_plane_thickness_p95_mean_m", 0.0),
+                    )
+                ),
             }
     return None
 
@@ -171,7 +181,7 @@ def make_overview(
         m = metrics.get(key, {})
         subtitle = (
             f"points={m.get('point_count', 0):.0f}\n"
-            f"behind={m.get('behind', 0):.0f}, p95={m.get('thickness', 0):.3f} m"
+            f"residual={m.get('residual', 0):.0f}, p95={m.get('thickness', 0):.3f} m"
         )
         ax.set_title(f"{title}\n{subtitle}", fontsize=10)
         ax.set_xlabel("x [m]")
@@ -253,10 +263,16 @@ def make_metric_bars(metrics: Dict[str, Dict[str, float]], out_path: Path, dpi: 
     labels = ["raw", "marker_clean", "vote_clean"]
     pretty = ["Raw", "Marker", "Vote"]
     fig, axes = plt.subplots(1, 3, figsize=(11.8, 3.8), constrained_layout=True)
+    raw_residual = metrics["raw"].get("residual", 0.0)
+    for label in labels:
+        residual = metrics[label].get("residual", 0.0)
+        metrics[label]["removal_vs_raw"] = (
+            max(0.0, (raw_residual - residual) / raw_residual) if raw_residual else 0.0
+        )
     specs = [
-        ("behind", "Behind-plane ghost points"),
-        ("ghost_rate", "Ghost rate"),
-        ("thickness", "Thickness p95 [m]"),
+        ("residual", "Reflection residual points"),
+        ("removal_vs_raw", "Reflection removal vs raw"),
+        ("thickness", "Plane thickness p95 [m]"),
     ]
     for ax, (key, title) in zip(axes, specs):
         values = [metrics[label].get(key, 0.0) for label in labels]
@@ -264,7 +280,7 @@ def make_metric_bars(metrics: Dict[str, Dict[str, float]], out_path: Path, dpi: 
         ax.set_title(title, fontsize=10)
         ax.grid(axis="y", linewidth=0.25, alpha=0.30)
         for i, value in enumerate(values):
-            text = f"{value:.0f}" if key == "behind" else f"{value:.3f}"
+            text = f"{value:.0f}" if key == "residual" else f"{value:.3f}"
             ax.text(i, value, text, ha="center", va="bottom", fontsize=8)
     fig.savefig(out_path, dpi=dpi)
     plt.close(fig)
@@ -334,14 +350,17 @@ def make_rejection_overlay(
 
 def write_summary(out_dir: Path, metrics: Dict[str, Dict[str, float]]) -> None:
     md = out_dir / "quicklook_summary.md"
+    raw_residual = metrics["raw"].get("residual", 0.0)
     with md.open("w", encoding="utf-8") as f:
-        f.write("| label | points | ROI | behind | ghost_rate | thickness_p95_m |\n")
-        f.write("|---|---:|---:|---:|---:|---:|\n")
+        f.write("| label | points | ROI | residual | residual_rate | removal_vs_raw | valid_precision | thickness_p95_m |\n")
+        f.write("|---|---:|---:|---:|---:|---:|---:|---:|\n")
         for label in ["raw", "marker_clean", "vote_clean"]:
             m = metrics[label]
+            removal = max(0.0, (raw_residual - m["residual"]) / raw_residual) if raw_residual else 0.0
             f.write(
-                f"| {label} | {m['point_count']:.0f} | {m['roi']:.0f} | {m['behind']:.0f} | "
-                f"{m['ghost_rate']:.6f} | {m['thickness']:.6f} |\n"
+                f"| {label} | {m['point_count']:.0f} | {m['roi']:.0f} | {m['residual']:.0f} | "
+                f"{m['residual_rate']:.6f} | {removal:.6f} | {m['valid_precision']:.6f} | "
+                f"{m['thickness']:.6f} |\n"
             )
 
 

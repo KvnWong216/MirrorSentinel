@@ -15,6 +15,6 @@ set +u
 source /opt/ros/humble/setup.bash
 set -u
 
-exec colcon build --symlink-install --packages-select sentinel_lio fast_foundation_stereo_ros \
+exec colcon build --symlink-install --packages-select sentinel_lio mirrorsentinel_visual_prior \
   --cmake-args -DPython3_EXECUTABLE=/usr/bin/python3 -DPYTHON_EXECUTABLE=/usr/bin/python3 \
   "$@"

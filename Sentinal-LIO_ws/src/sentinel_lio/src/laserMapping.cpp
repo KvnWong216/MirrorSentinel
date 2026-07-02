@@ -803,6 +803,8 @@ void map_incremental()
 }
 
 PointCloudXYZI::Ptr pcl_wait_pub(new PointCloudXYZI(500000, 1));
+constexpr int kLiveMapPublishPeriod = 5;
+
 void publish_frame_world(const PointCloudPublisher::SharedPtr & pubLaserCloudFull)
 {
     if(scan_pub_en)
@@ -879,6 +881,44 @@ void publish_frame_world(const PointCloudPublisher::SharedPtr & pubLaserCloudFul
     }
 }
 
+void publish_rejected_world(const PointCloudPublisher::SharedPtr & pubRejectedCloud)
+{
+    if (!pubRejectedCloud || !sentinel_ptr || pubRejectedCloud->get_subscription_count() == 0)
+    {
+        return;
+    }
+
+    PointCloudXYZI::Ptr scan_body = dense_pub_en ? feats_undistort : feats_down_body;
+    if (!scan_body || scan_body->empty())
+    {
+        return;
+    }
+
+    PointCloudXYZI::Ptr rejected_world(new PointCloudXYZI());
+    rejected_world->reserve(scan_body->size() / 4 + 1);
+    for (const auto& point_body : scan_body->points)
+    {
+        if (sentinel_ptr->shouldKeepMapPoint(point_body, current_explicit_mask_enabled))
+        {
+            continue;
+        }
+        PointType point_world;
+        RGBpointBodyToWorld(&point_body, &point_world);
+        rejected_world->push_back(point_world);
+    }
+
+    if (rejected_world->empty())
+    {
+        return;
+    }
+
+    sensor_msgs::msg::PointCloud2 rejected_msg;
+    pcl::toROSMsg(*rejected_world, rejected_msg);
+    rejected_msg.header.stamp = sentinel_lio_ros2::stampFromSec(lidar_end_time);
+    rejected_msg.header.frame_id = "camera_init";
+    pubRejectedCloud->publish(rejected_msg);
+}
+
 void publish_frame_body(const PointCloudPublisher::SharedPtr & pubLaserCloudFull_body)
 {
     int size = feats_undistort->points.size();
@@ -916,6 +956,19 @@ void publish_effect_world(const PointCloudPublisher::SharedPtr & pubLaserCloudEf
 
 void publish_map(const PointCloudPublisher::SharedPtr & pubLaserCloudMap)
 {
+    if (!pubLaserCloudMap || pubLaserCloudMap->get_subscription_count() == 0 || ikdtree.Root_Node == nullptr)
+    {
+        return;
+    }
+
+    PointVector storage;
+    ikdtree.flatten(ikdtree.Root_Node, storage, NOT_RECORD);
+    featsFromMap->clear();
+    featsFromMap->points = storage;
+    featsFromMap->width = featsFromMap->points.size();
+    featsFromMap->height = 1;
+    featsFromMap->is_dense = false;
+
     sensor_msgs::msg::PointCloud2 laserCloudMap;
     pcl::toROSMsg(*featsFromMap, laserCloudMap);
     laserCloudMap.header.stamp = sentinel_lio_ros2::stampFromSec(lidar_end_time);
@@ -1108,7 +1161,7 @@ void h_share_model(state_ikfom &s, esekfom::dyn_share_datastruct<double> &ekfom_
     solve_time += omp_get_wtime() - solve_start_;
 }
 
-void stereoDepthCallback(const sensor_msgs::msg::Image::ConstSharedPtr msg) {
+void visualDepthCallback(const sensor_msgs::msg::Image::ConstSharedPtr msg) {
     cv_bridge::CvImagePtr cv_ptr;
     try {
         cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::TYPE_32FC1);
@@ -1120,7 +1173,7 @@ void stereoDepthCallback(const sensor_msgs::msg::Image::ConstSharedPtr msg) {
     }
 }
 
-void stereoMaskCallback(const sensor_msgs::msg::Image::ConstSharedPtr msg) {
+void visualMaskCallback(const sensor_msgs::msg::Image::ConstSharedPtr msg) {
     cv_bridge::CvImagePtr cv_ptr;
     try {
         cv_ptr = cv_bridge::toCvCopy(msg, msg->encoding);
@@ -1132,7 +1185,7 @@ void stereoMaskCallback(const sensor_msgs::msg::Image::ConstSharedPtr msg) {
     }
 }
 
-void stereoRgbCallback(const sensor_msgs::msg::Image::ConstSharedPtr msg) {
+void visualRgbCallback(const sensor_msgs::msg::Image::ConstSharedPtr msg) {
     cv_bridge::CvImagePtr cv_ptr;
     try {
         cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
@@ -1390,15 +1443,16 @@ int main(int argc, char** argv)
     auto sub_imu = nh->create_subscription<sensor_msgs::msg::Imu>(imu_topic, rclcpp::SensorDataQoS(), imu_cbk);
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr sub_rgb;
     if (rgb_subscribe_enable) {
-        sub_rgb = nh->create_subscription<sensor_msgs::msg::Image>(rgb_topic, 10, stereoRgbCallback);
+        sub_rgb = nh->create_subscription<sensor_msgs::msg::Image>(rgb_topic, 10, visualRgbCallback);
     }
     auto image_qos = rclcpp::SensorDataQoS().keep_last(1);
-    auto sub_depth = nh->create_subscription<sensor_msgs::msg::Image>(depth_topic, image_qos, stereoDepthCallback);
-    auto sub_mask = nh->create_subscription<sensor_msgs::msg::Image>(mask_topic, image_qos, stereoMaskCallback);
+    auto sub_depth = nh->create_subscription<sensor_msgs::msg::Image>(depth_topic, image_qos, visualDepthCallback);
+    auto sub_mask = nh->create_subscription<sensor_msgs::msg::Image>(mask_topic, image_qos, visualMaskCallback);
     auto pubLaserCloudFull = nh->create_publisher<sensor_msgs::msg::PointCloud2>("/cloud_registered", 100000);
     auto pubLaserCloudFull_body = nh->create_publisher<sensor_msgs::msg::PointCloud2>("/cloud_registered_body", 100000);
     auto pubLaserCloudEffect = nh->create_publisher<sensor_msgs::msg::PointCloud2>("/cloud_effected", 100000);
     auto pubLaserCloudMap = nh->create_publisher<sensor_msgs::msg::PointCloud2>("/Laser_map", 100000);
+    auto pubRejectedCloud = nh->create_publisher<sensor_msgs::msg::PointCloud2>("/mirror_sentinel/rejected_points", 100000);
     auto pubOdomAftMapped = nh->create_publisher<nav_msgs::msg::Odometry>("/Odometry", 100000);
     auto pubPath = nh->create_publisher<nav_msgs::msg::Path>("/path", 100000);
     auto pubSentinelStats = stats_enable ? nh->create_publisher<std_msgs::msg::Float32MultiArray>(stats_topic, 10) : nullptr;
@@ -1592,8 +1646,9 @@ int main(int argc, char** argv)
             if (path_en)                         publish_path(pubPath);
             if (scan_pub_en || pcd_save_en)      publish_frame_world(pubLaserCloudFull);
             if (scan_pub_en && scan_body_pub_en) publish_frame_body(pubLaserCloudFull_body);
+            if (scan_pub_en)                     publish_rejected_world(pubRejectedCloud);
             // publish_effect_world(pubLaserCloudEffect);
-            // publish_map(pubLaserCloudMap);
+            if (scan_pub_en && frame_num % kLiveMapPublishPeriod == 0) publish_map(pubLaserCloudMap);
 
             /*** Debug variables ***/
             if (runtime_pos_log)

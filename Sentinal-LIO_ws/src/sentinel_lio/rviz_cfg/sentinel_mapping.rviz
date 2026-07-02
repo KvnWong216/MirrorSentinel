@@ -1,51 +1,46 @@
 Panels:
   - Class: rviz_common/Displays
-    Help Height: 70
+    Help Height: 0
     Name: Displays
     Property Tree Widget:
       Expanded:
-        - /Global Options1
-        - /Live Mapping1
-        - /Sentinel Priors1
-        - /Debug1
-      Splitter Ratio: 0.55
-    Tree Height: 780
+        - /Status1
+        - /MirrorSentinel1
+        - /MirrorSentinel1/Current Scan1
+        - /MirrorSentinel1/Accumulated Kept1
+        - /MirrorSentinel1/Rejected Current1
+        - /MirrorSentinel1/Rejected History1
+        - /Odometry1
+        - /Path1
+        - /Depth Prior1
+      Splitter Ratio: 0.3400000035762787
+    Tree Height: 207
   - Class: rviz_common/Selection
     Name: Selection
   - Class: rviz_common/Tool Properties
     Expanded:
-      - /2D Goal Pose1
+      - /2D Pose Estimate1
       - /Publish Point1
     Name: Tool Properties
-    Splitter Ratio: 0.5
+    Splitter Ratio: 0.5799999833106995
   - Class: rviz_common/Views
     Expanded:
       - /Current View1
     Name: Views
     Splitter Ratio: 0.5
   - Class: rviz_common/Time
+    Experimental: false
     Name: Time
     SyncMode: 0
     SyncSource: ""
 Visualization Manager:
   Class: ""
   Displays:
-    - Alpha: 0.45
-      Cell Size: 1
-      Class: rviz_default_plugins/Grid
-      Color: 80; 80; 80
+    - Class: rviz_default_plugins/Axes
       Enabled: true
-      Line Style:
-        Line Width: 0.03
-        Value: Lines
-      Name: Ground Grid
-      Normal Cell Count: 0
-      Offset:
-        X: 0
-        Y: 0
-        Z: 0
-      Plane: XY
-      Plane Cell Count: 40
+      Length: 0.699999988079071
+      Name: Axes
+      Radius: 0.10000000149011612
       Reference Frame: <Fixed Frame>
       Value: true
     - Class: rviz_default_plugins/TF
@@ -53,14 +48,18 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: true
-      Marker Scale: 0.35
+        camera_init:
+          Value: true
+        world:
+          Value: true
+      Marker Scale: 0.3499999940395355
       Name: TF
       Show Arrows: true
       Show Axes: true
       Show Names: false
       Tree:
-        camera_init:
-          body:
+        world:
+          camera_init:
             {}
       Update Interval: 0
       Value: true
@@ -69,317 +68,225 @@ Visualization Manager:
         - Alpha: 1
           Autocompute Intensity Bounds: true
           Autocompute Value Bounds:
-            Max Value: 3
-            Min Value: -1
+            Max Value: 20
+            Min Value: -3
             Value: false
           Axis: Z
           Channel Name: intensity
           Class: rviz_default_plugins/PointCloud2
-          Color: 220; 220; 220
-          Color Transformer: AxisColor
-          Decay Time: 0.7
+          Color: 239; 41; 41
+          Color Transformer: FlatColor
+          Decay Time: 0
           Enabled: true
           Invert Rainbow: false
           Max Color: 255; 255; 255
-          Min Color: 70; 140; 255
+          Max Intensity: 4096
+          Min Color: 0; 0; 0
+          Min Intensity: 0
           Name: Current Scan
           Position Transformer: XYZ
-          Queue Size: 8
+          Selectable: true
+          Size (Pixels): 4
+          Size (m): 0.009999999776482582
+          Style: Points
+          Topic:
+            Depth: 5
+            Durability Policy: Volatile
+            Filter size: 10
+            History Policy: Keep Last
+            Reliability Policy: Reliable
+            Value: /cloud_registered
+          Use Fixed Frame: true
+          Use rainbow: false
+          Value: true
+        - Alpha: 0.5
+          Autocompute Intensity Bounds: false
+          Autocompute Value Bounds:
+            Max Value: 15
+            Min Value: -5
+            Value: false
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz_default_plugins/PointCloud2
+          Color: 238; 238; 236
+          Color Transformer: Intensity
+          Decay Time: 10000
+          Enabled: true
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Max Intensity: 159
+          Min Color: 0; 0; 0
+          Min Intensity: 5
+          Name: Accumulated Kept
+          Position Transformer: XYZ
+          Selectable: false
+          Size (Pixels): 1
+          Size (m): 0.004999999888241291
+          Style: Points
+          Topic:
+            Depth: 5
+            Durability Policy: Volatile
+            Filter size: 10
+            History Policy: Keep Last
+            Reliability Policy: Reliable
+            Value: /cloud_registered
+          Use Fixed Frame: true
+          Use rainbow: true
+          Value: true
+        - Alpha: 1
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 10
+            Min Value: -10
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz_default_plugins/PointCloud2
+          Color: 245; 121; 0
+          Color Transformer: FlatColor
+          Decay Time: 0
+          Enabled: true
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Max Intensity: 4096
+          Min Color: 0; 0; 0
+          Min Intensity: 0
+          Name: Rejected Current
+          Position Transformer: XYZ
+          Selectable: true
+          Size (Pixels): 5
+          Size (m): 0.019999999552965164
+          Style: Squares
+          Topic:
+            Depth: 5
+            Durability Policy: Volatile
+            Filter size: 10
+            History Policy: Keep Last
+            Reliability Policy: Reliable
+            Value: /mirror_sentinel/rejected_points
+          Use Fixed Frame: true
+          Use rainbow: false
+          Value: true
+        - Alpha: 0.949999988079071
+          Autocompute Intensity Bounds: true
+          Autocompute Value Bounds:
+            Max Value: 10
+            Min Value: -10
+            Value: true
+          Axis: Z
+          Channel Name: intensity
+          Class: rviz_default_plugins/PointCloud2
+          Color: 252; 175; 62
+          Color Transformer: FlatColor
+          Decay Time: 10000
+          Enabled: true
+          Invert Rainbow: false
+          Max Color: 255; 255; 255
+          Max Intensity: 4096
+          Min Color: 0; 0; 0
+          Min Intensity: 0
+          Name: Rejected History
+          Position Transformer: XYZ
           Selectable: false
           Size (Pixels): 2
-          Size (m): 0.03
+          Size (m): 0.009999999776482582
           Style: Points
           Topic:
             Depth: 5
             Durability Policy: Volatile
-            History Policy: Keep Last
-            Reliability Policy: Best Effort
-            Value: /cloud_registered
-          Use Fixed Frame: true
-          Use rainbow: true
-          Value: true
-        - Alpha: 0.16
-          Autocompute Intensity Bounds: true
-          Autocompute Value Bounds:
-            Max Value: 3
-            Min Value: -1
-            Value: false
-          Axis: Z
-          Channel Name: intensity
-          Class: rviz_default_plugins/PointCloud2
-          Color: 120; 170; 255
-          Color Transformer: AxisColor
-          Decay Time: 30
-          Enabled: true
-          Invert Rainbow: false
-          Max Color: 255; 255; 255
-          Min Color: 70; 140; 255
-          Name: Recent Scan Trail
-          Position Transformer: XYZ
-          Queue Size: 200
-          Selectable: false
-          Size (Pixels): 1
-          Size (m): 0.015
-          Style: Points
-          Topic:
-            Depth: 30
-            Durability Policy: Volatile
-            History Policy: Keep Last
-            Reliability Policy: Best Effort
-            Value: /cloud_registered
-          Use Fixed Frame: true
-          Use rainbow: true
-          Value: true
-        - Alpha: 0.9
-          Autocompute Intensity Bounds: true
-          Autocompute Value Bounds:
-            Max Value: 3
-            Min Value: -1
-            Value: false
-          Axis: Z
-          Channel Name: intensity
-          Class: rviz_default_plugins/PointCloud2
-          Color: 180; 180; 180
-          Color Transformer: AxisColor
-          Decay Time: 0
-          Enabled: false
-          Invert Rainbow: false
-          Max Color: 255; 255; 255
-          Min Color: 70; 140; 255
-          Name: Local Map
-          Position Transformer: XYZ
-          Queue Size: 2
-          Selectable: false
-          Size (Pixels): 1
-          Size (m): 0.025
-          Style: Points
-          Topic:
-            Depth: 1
-            Durability Policy: Volatile
-            History Policy: Keep Last
-            Reliability Policy: Best Effort
-            Value: /Laser_map
-          Use Fixed Frame: true
-          Use rainbow: true
-          Value: false
-        - Alpha: 1
-          Buffer Length: 1
-          Class: rviz_default_plugins/Path
-          Color: 0; 220; 255
-          Enabled: true
-          Head Diameter: 0.25
-          Head Length: 0.35
-          Length: 0.25
-          Line Style: Billboards
-          Line Width: 0.04
-          Name: Estimated Path
-          Offset:
-            X: 0
-            Y: 0
-            Z: 0
-          Pose Color: 0; 220; 255
-          Pose Style: None
-          Queue Size: 10
-          Radius: 0.03
-          Shaft Diameter: 0.08
-          Shaft Length: 0.25
-          Topic:
-            Depth: 10
-            Durability Policy: Volatile
+            Filter size: 10
             History Policy: Keep Last
             Reliability Policy: Reliable
-            Value: /path
-          Value: true
-        - Angle Tolerance: 0.001
-          Class: rviz_default_plugins/Odometry
-          Covariance:
-            Orientation:
-              Alpha: 0.15
-              Color: 255; 255; 127
-              Color Style: Unique
-              Frame: Local
-              Offset: 1
-              Scale: 1
-              Value: false
-            Position:
-              Alpha: 0.15
-              Color: 204; 51; 204
-              Scale: 1
-              Value: false
-            Value: false
-          Enabled: true
-          Keep: 40
-          Name: Odometry
-          Position Tolerance: 0.001
-          Queue Size: 10
-          Shape:
-            Alpha: 1
-            Axes Length: 0.45
-            Axes Radius: 0.04
-            Color: 255; 170; 0
-            Head Length: 0.18
-            Head Radius: 0.08
-            Shaft Length: 0.18
-            Shaft Radius: 0.03
-            Value: Arrow
-          Topic:
-            Depth: 10
-            Durability Policy: Volatile
-            History Policy: Keep Last
-            Reliability Policy: Reliable
-            Value: /Odometry
-          Value: true
-      Enabled: true
-      Name: Live Mapping
-    - Class: rviz_common/Group
-      Displays:
-        - Alpha: 1
-          Autocompute Intensity Bounds: true
-          Autocompute Value Bounds:
-            Max Value: 3
-            Min Value: -1
-            Value: true
-          Axis: Z
-          Channel Name: intensity
-          Class: rviz_default_plugins/PointCloud2
-          Color: 255; 60; 60
-          Color Transformer: FlatColor
-          Decay Time: 12
-          Enabled: true
-          Invert Rainbow: false
-          Max Color: 255; 255; 255
-          Min Color: 0; 0; 0
-          Name: Rejected Ghost Points
-          Position Transformer: XYZ
-          Queue Size: 30
-          Selectable: false
-          Size (Pixels): 4
-          Size (m): 0.06
-          Style: Points
-          Topic:
-            Depth: 10
-            Durability Policy: Volatile
-            History Policy: Keep Last
-            Reliability Policy: Best Effort
-            Value: /mirror_sentinel/ghost_points
+            Value: /mirror_sentinel/rejected_points
           Use Fixed Frame: true
           Use rainbow: false
           Value: true
-        - Class: rviz_default_plugins/Image
-          Enabled: false
-          Max Value: 1
-          Median window: 5
-          Min Value: 0
-          Name: Mirror Mask
-          Normalize Range: true
-          Topic:
-            Depth: 5
-            Durability Policy: Volatile
-            History Policy: Keep Last
-            Reliability Policy: Reliable
-            Value: /vfm/mirror_mask
-          Value: false
-        - Class: rviz_default_plugins/Image
-          Enabled: false
-          Max Value: 10
-          Median window: 5
-          Min Value: 0
-          Name: Depth Prior
-          Normalize Range: true
-          Topic:
-            Depth: 5
-            Durability Policy: Volatile
-            History Policy: Keep Last
-            Reliability Policy: Reliable
-            Value: /vfm/depth_image
-          Value: false
-        - Class: rviz_default_plugins/Image
-          Enabled: false
-          Max Value: 1
-          Median window: 5
-          Min Value: 0
-          Name: Mask Overlay
-          Normalize Range: true
-          Topic:
-            Depth: 5
-            Durability Policy: Volatile
-            History Policy: Keep Last
-            Reliability Policy: Reliable
-            Value: /mirror_sentinel/mask_overlay
-          Value: false
       Enabled: true
-      Name: Sentinel Priors
-    - Class: rviz_common/Group
-      Displays:
-        - Alpha: 1
-          Autocompute Intensity Bounds: true
-          Autocompute Value Bounds:
-            Max Value: 3
-            Min Value: -1
-            Value: true
-          Axis: Z
-          Channel Name: intensity
-          Class: rviz_default_plugins/PointCloud2
-          Color: 255; 190; 0
-          Color Transformer: FlatColor
-          Decay Time: 3
-          Enabled: false
-          Invert Rainbow: false
-          Max Color: 255; 255; 255
-          Min Color: 0; 0; 0
-          Name: Effective Features
-          Position Transformer: XYZ
-          Queue Size: 10
-          Selectable: false
-          Size (Pixels): 3
-          Size (m): 0.04
-          Style: Points
-          Topic:
-            Depth: 10
-            Durability Policy: Volatile
-            History Policy: Keep Last
-            Reliability Policy: Best Effort
-            Value: /cloud_effected
-          Use Fixed Frame: true
-          Use rainbow: false
+      Name: MirrorSentinel
+    - Angle Tolerance: 0.009999999776482582
+      Class: rviz_default_plugins/Odometry
+      Covariance:
+        Orientation:
+          Alpha: 0.5
+          Color: 255; 255; 127
+          Color Style: Unique
+          Frame: Local
+          Offset: 1
+          Scale: 1
           Value: false
-        - Alpha: 1
-          Autocompute Intensity Bounds: true
-          Autocompute Value Bounds:
-            Max Value: 3
-            Min Value: -1
-            Value: true
-          Axis: Z
-          Channel Name: intensity
-          Class: rviz_default_plugins/PointCloud2
-          Color: 170; 120; 255
-          Color Transformer: FlatColor
-          Decay Time: 3
-          Enabled: false
-          Invert Rainbow: false
-          Max Color: 255; 255; 255
-          Min Color: 0; 0; 0
-          Name: Body Frame Scan
-          Position Transformer: XYZ
-          Queue Size: 10
-          Selectable: false
-          Size (Pixels): 3
-          Size (m): 0.04
-          Style: Points
-          Topic:
-            Depth: 10
-            Durability Policy: Volatile
-            History Policy: Keep Last
-            Reliability Policy: Best Effort
-            Value: /cloud_registered_body
-          Use Fixed Frame: true
-          Use rainbow: false
+        Position:
+          Alpha: 0.30000001192092896
+          Color: 204; 51; 204
+          Scale: 1
           Value: false
+        Value: false
       Enabled: true
-      Name: Debug
+      Keep: 1
+      Name: Odometry
+      Position Tolerance: 0.0010000000474974513
+      Shape:
+        Alpha: 1
+        Axes Length: 0.5
+        Axes Radius: 0.15000000596046448
+        Color: 255; 85; 0
+        Head Length: 0
+        Head Radius: 0
+        Shaft Length: 0.800000011920929
+        Shaft Radius: 0.5
+        Value: Axes
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /Odometry
+      Value: true
+    - Alpha: 0
+      Buffer Length: 2
+      Class: rviz_default_plugins/Path
+      Color: 25; 255; 255
+      Enabled: true
+      Head Diameter: 0
+      Head Length: 0
+      Length: 0.30000001192092896
+      Line Style: Billboards
+      Line Width: 0.03999999910593033
+      Name: Path
+      Offset:
+        X: 0
+        Y: 0
+        Z: 0
+      Pose Color: 25; 255; 255
+      Pose Style: None
+      Radius: 0.029999999329447746
+      Shaft Diameter: 0.4000000059604645
+      Shaft Length: 0.4000000059604645
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        Filter size: 10
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /path
+      Value: true
+    - Class: rviz_default_plugins/Image
+      Enabled: true
+      Max Value: 10
+      Median window: 5
+      Min Value: 0
+      Name: Depth Prior
+      Normalize Range: true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /vfm/depth_image
+      Value: true
   Enabled: true
   Global Options:
-    Background Color: 18; 20; 24
+    Background Color: 48; 48; 48
     Fixed Frame: camera_init
     Frame Rate: 30
   Name: root
@@ -392,6 +299,9 @@ Visualization Manager:
     - Class: rviz_default_plugins/Measure
       Line color: 128; 128; 0
     - Class: rviz_default_plugins/SetInitialPose
+      Covariance x: 0.25
+      Covariance y: 0.25
+      Covariance yaw: 0.06853891909122467
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -420,40 +330,43 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 8
+      Distance: 12
       Enable Stereo Rendering:
-        Stereo Eye Separation: 0.06
+        Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 1.5
+        X: 0
         Y: 0
-        Z: 0.5
+        Z: 0
       Focal Shape Fixed Size: true
-      Focal Shape Size: 0.05
+      Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
-      Near Clip Distance: 0.01
-      Pitch: 0.75
+      Near Clip Distance: 0.009999999776482582
+      Pitch: 0.7799999713897705
       Target Frame: camera_init
-      Yaw: 0.78
+      Value: Orbit (rviz_default_plugins)
+      Yaw: 0.7799999713897705
     Saved: ~
 Window Geometry:
+  Depth Prior:
+    collapsed: false
   Displays:
     collapsed: false
-  Height: 1040
+  Height: 1278
   Hide Left Dock: false
   Hide Right Dock: false
-  QMainWindow State: ""
+  QMainWindow State: 000000ff00000000fd00000002000000000000033400000465fc0200000005fb00000016004400650070007400680020005000720069006f0072010000003d000004650000002800fffffffb000000100044006900730070006c00610079007300000000e30000010c000000c900fffffffb0000001200530065006c0065006300740069006f006e0000000161000000e90000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007300000001e5000000ba0000005c00fffffffb0000000a0056006900650077007300000001c3000001a1000000a400ffffff000000030000084300000039fc0100000001fb0000000800540069006d0065010000000000000843000002fb00ffffff000005090000046500000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
-    collapsed: true
+    collapsed: false
   Time:
     collapsed: false
   Tool Properties:
-    collapsed: true
+    collapsed: false
   Views:
     collapsed: false
-  Width: 1440
+  Width: 2115
   X: 80
   Y: 40

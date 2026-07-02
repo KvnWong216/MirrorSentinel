@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="3">
-  <name>fast_foundation_stereo_ros</name>
+  <name>mirrorsentinel_visual_prior</name>
   <version>0.1.0</version>
-  <description>ROS2 wrapper for Fast-FoundationStereo TensorRT depth publishing.</description>
+  <description>ROS2 visual-prior nodes for MirrorSentinel: DA3 depth, reflection masks, and replayed mask priors.</description>
   <maintainer email="12312820@mail.susyech.edu.cn">Yugong Wang</maintainer>
   <license>TODO</license>
 

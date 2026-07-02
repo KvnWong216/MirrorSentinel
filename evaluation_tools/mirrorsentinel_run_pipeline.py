@@ -16,7 +16,7 @@ from typing import List, Optional
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_BAG = REPO_ROOT / "dataset/rosbag2/2026-03-30-21-31-03_rescued"
+DEFAULT_BAG = REPO_ROOT / "dataset/rosbag2/2026-03-30-21-31-03"
 DEFAULT_PRIOR_BAG = (
     REPO_ROOT
     / "evaluation_tools/results/slam/self_collected/"
@@ -40,7 +40,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--bag", type=Path, default=DEFAULT_BAG)
     parser.add_argument("--prior-bag", type=Path, default=DEFAULT_PRIOR_BAG)
     parser.add_argument("--no-prior-bag", action="store_true", help="do not replay a saved /vfm prior bag")
-    parser.add_argument("--sequence", default="2026-03-30-21-31-03_rescued_mirrorsentinel_mvp")
+    parser.add_argument("--sequence", default="2026-03-30-21-31-03_fullbag_mirrorsentinel_mvp")
     parser.add_argument("--method", default="sentinel_full")
     parser.add_argument("--annotation", type=Path, default=DEFAULT_ANNOTATION)
     parser.add_argument("--params-base", type=Path, default=LEGACY_DENSE_PARAMS)

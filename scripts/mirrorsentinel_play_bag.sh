@@ -3,7 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO_ROOT=$(cd "${SCRIPT_DIR}/.." && pwd)
-DEFAULT_BAG="${REPO_ROOT}/dataset/rosbag2/2026-03-30-21-31-03_rescued"
+DEFAULT_BAG="${REPO_ROOT}/dataset/rosbag2/2026-03-30-21-31-03"
 
 BAG="${DEFAULT_BAG}"
 if [[ $# -gt 0 && "${1}" != -* ]]; then

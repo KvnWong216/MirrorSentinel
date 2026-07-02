@@ -36,10 +36,10 @@ To reproduce the current self-collected experiments, restore a ROS2 bag under:
 dataset/rosbag2/
 ```
 
-The local prototype bag used in the current notes is:
+The local full converted bag used in the current notes is:
 
 ```text
-dataset/rosbag2/2026-03-30-21-31-03_rescued
+dataset/rosbag2/2026-03-30-21-31-03
 ```
 
 For auxiliary perception and reconstruction experiments, follow:

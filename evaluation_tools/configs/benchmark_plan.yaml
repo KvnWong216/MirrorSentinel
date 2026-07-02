@@ -14,11 +14,16 @@ evaluation_protocol:
     main_slam_task: "ROS2 bag replay -> online SLAM -> trajectory/map/runtime metrics"
     upstream_prior_task: "depth/reflection prior accuracy only; evaluated separately on 3DRef"
   benchmark_basis:
+    reflection_removal:
+      - 3DRef_reflection_removal_rate
+      - 3DRef_indoor_precision
+      - 3DRef_non_reflection_precision
     trajectory:
       - TUM_RGBD_ATE_RPE
       - KITTI_odometry_segment_drift
       - Hilti_style_failure_rate
     mapping:
+      - MapEval_local_structural_consistency
       - reconstruction_precision_recall_fscore
       - cloud_to_reference_distance
       - local_plane_thickness
@@ -29,11 +34,20 @@ evaluation_protocol:
     plane_thickness: [0.05, 0.10, 0.20]
     ghost_behind_plane_margin: [0.02, 0.05, 0.10]
   primary_main_slam_metrics:
-    - ghost_rate
-    - behind_plane_point_count
-    - plane_thickness_p95
-    - loop_drift_ratio
-    - runtime_mean_ms
+    - reflection_removal_rate
+    - reflection_residual_rate
+    - valid_structure_precision_proxy
+    - reflective_plane_thickness_p95_m
+    - map_retention_rate
+    - pipeline_fps
+  self_collected_proxy_metrics:
+    - reflection_residual_points
+    - reflection_residual_rate
+    - reflection_removal_rate_vs_raw
+    - valid_structure_precision_proxy
+    - reflective_plane_thickness_p95_m
+    - map_retention_rate_vs_raw
+    - pipeline_cloud_fps
   gt_trajectory_metrics:
     - ate_rmse
     - rpe_trans_rmse
@@ -44,7 +58,7 @@ evaluation_protocol:
     - f1
     - precision
     - recall
-    - fps
+    - prior_fps
 
 mirror_glass_slam:
   # Main paper evidence. These are ROS2 Humble bags with LiDAR/IMU/image streams.
@@ -104,11 +118,25 @@ public_slam:
     - sentinel_full
 
 reflection_benchmark:
-  # Upstream prior auxiliary experiment only. Not the online SLAM main benchmark.
+  # Official reflection benchmark support.  Use IoU/F1 only as upstream prior
+  # evidence; use reflection-removal metrics when evaluating map/point filtering.
   dataset: 3DRef
   raw_root: dataset/public/3DRef/reflection
   pred_root: evaluation_tools/results/3dref/predictions
   eval_root: evaluation_tools/results/3dref/eval
+  semantic_labels:
+    normal: 1
+    glass: 2
+    mirror: 3
+    other_reflective: 4
+    reflection_virtual_points: 5
+    obstacle_behind_glass: 6
+  map_cleaning_metrics:
+    - reflection_removal_rate
+    - reflection_residual_rate
+    - indoor_precision
+    - non_reflection_precision
+    - map_retention_rate
   splits:
     - name: mirror
       gt_dir: dataset/public/3DRef/reflection/rgb/mirror/test/mask

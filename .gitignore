@@ -22,6 +22,12 @@ __pycache__/
 *.ply
 *.db3
 *.mcap
+!/evaluation_tools/data/gt_reference/**/*.pcd
+!/evaluation_tools/data/gt_reference/**/*.ply
+!/evaluation_tools/data/gt_reference/**/*.npy
+!/evaluation_tools/data/gt_reference/**/*.png
+!/evaluation_tools/data/gt_reference/**/*.json
+!/evaluation_tools/data/gt_reference/**/*.yaml
 
 # Local datasets and checkpoints
 /dataset/rosbag/

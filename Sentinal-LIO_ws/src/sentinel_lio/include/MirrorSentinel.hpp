@@ -143,19 +143,19 @@ public:
     void updateDepthMap(const cv::Mat& depth_image) {
         std::lock_guard<std::mutex> lock(depth_mutex);
         if (depth_image.empty()) {
-            current_stereo_depth_.release();
+            current_visual_depth_.release();
             depth_valid_ratio_ = 0.0f;
             return;
         }
 
-        current_stereo_depth_ = depth_image.clone();
-        const int total_pixels = current_stereo_depth_.rows * current_stereo_depth_.cols;
+        current_visual_depth_ = depth_image.clone();
+        const int total_pixels = current_visual_depth_.rows * current_visual_depth_.cols;
         if (total_pixels <= 0) {
             depth_valid_ratio_ = 0.0f;
             return;
         }
 
-        const int valid_pixels = cv::countNonZero(current_stereo_depth_ > 0.1f);
+        const int valid_pixels = cv::countNonZero(current_visual_depth_ > 0.1f);
         depth_valid_ratio_ = static_cast<float>(valid_pixels) / static_cast<float>(total_pixels);
     }
 
@@ -401,7 +401,7 @@ public:
                 const int u = std::round(fx_ * p_c.x() / p_c.z() + cx_);
                 const int v = std::round(fy_ * p_c.y() / p_c.z() + cy_);
                 if (u >= 0 && u < img_width_ && v >= 0 && v < img_height_) {
-                    const float z_vfm = current_stereo_depth_.at<float>(v, u);
+                    const float z_vfm = current_visual_depth_.at<float>(v, u);
                     if (z_vfm > 0.1f && (p_c.z() - z_vfm) >= ghost_depth_margin) {
                         if (dist_(rng_) < confidence_floor_) {
                             cloud_out->push_back(pt);
@@ -482,7 +482,7 @@ public:
 
             // 【兜底逻辑】：没有显式镜面 mask 时，保留旧的深度差判定
             if (in_fov_frustum) {
-                float z_vfm = current_stereo_depth_.at<float>(v, u);
+                float z_vfm = current_visual_depth_.at<float>(v, u);
                 if (z_vfm > 0.1f && (p_c.z() - z_vfm) >= 0.8f) {
                     points_to_delete.push_back(pt_w); 
                 }
@@ -594,7 +594,7 @@ private:
 	    }
 
 	    bool isDepthReliable() const {
-	        return !current_stereo_depth_.empty() && depth_valid_ratio_ >= min_depth_valid_ratio_;
+	        return !current_visual_depth_.empty() && depth_valid_ratio_ >= min_depth_valid_ratio_;
 	    }
 
 	    bool hasActivePriorUnlocked(bool explicit_mask_enabled) const {
@@ -652,7 +652,7 @@ private:
 	                continue;
 	            }
 	            const float z_lidar = static_cast<float>(p_c.z());
-	            const float z_vfm = current_stereo_depth_.at<float>(v, u);
+	            const float z_vfm = current_visual_depth_.at<float>(v, u);
 	            if (z_lidar <= 0.1f || z_vfm <= 0.1f) {
 	                continue;
 	            }
@@ -696,7 +696,7 @@ private:
 	                continue;
 	            }
 	            const float z_lidar = static_cast<float>(p_c.z());
-	            const float z_vfm = current_stereo_depth_.at<float>(v, u);
+	            const float z_vfm = current_visual_depth_.at<float>(v, u);
 	            if (z_lidar <= 0.1f || z_vfm <= 0.1f) {
 	                continue;
 	            }
@@ -722,10 +722,10 @@ private:
 	                                    int u,
 	                                    int v,
 	                                    PointType& anchor_body) const {
-	        if (current_stereo_depth_.empty() || u < 0 || u >= img_width_ || v < 0 || v >= img_height_) {
+	        if (current_visual_depth_.empty() || u < 0 || u >= img_width_ || v < 0 || v >= img_height_) {
 	            return false;
 	        }
-	        const float z_vfm = current_stereo_depth_.at<float>(v, u);
+	        const float z_vfm = current_visual_depth_.at<float>(v, u);
 	        if (!std::isfinite(z_vfm) || z_vfm <= 0.1f || p_c.z() <= 0.1) {
 	            return false;
 	        }
@@ -780,7 +780,7 @@ private:
 	        float residual = 0.0f;
 	        bool has_valid_depth = false;
 	        if (depth_ready) {
-	            const float z_vfm = current_stereo_depth_.at<float>(v, u);
+	            const float z_vfm = current_visual_depth_.at<float>(v, u);
 	            if (z_vfm > 0.1f) {
 	                residual = static_cast<float>(p_c.z()) - calibratedDepth(z_vfm, current_depth_calibration_);
 	                has_valid_depth = true;
@@ -907,7 +907,7 @@ private:
             return clampConfidence(mask_confidence);
         }
 
-        const float z_vfm = current_stereo_depth_.at<float>(v, u);
+        const float z_vfm = current_visual_depth_.at<float>(v, u);
         if (z_vfm <= 0.1f) {
             if (use_mask && (in_mask_core || in_mask_boundary)) {
                 return clampConfidence(mask_confidence * reflective_invalid_depth_confidence_);
@@ -1020,7 +1020,7 @@ private:
         const bool in_fov_frustum = (u >= 0 && u < img_width_ && v >= 0 && v < img_height_);
 
         if (in_fov_frustum) {
-            const float z_vfm = current_stereo_depth_.at<float>(v, u);
+            const float z_vfm = current_visual_depth_.at<float>(v, u);
             if (z_vfm > 0.1f) {
                 const float depth_delta = p_c.z() - z_vfm;
                 if (depth_delta >= ghost_depth_margin) {
@@ -1046,7 +1046,7 @@ private:
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_ghost_;
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr pub_mask_viz_;
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr pub_mask_overlay_;
-    cv::Mat current_stereo_depth_;
+    cv::Mat current_visual_depth_;
     cv::Mat current_rgb_image_;
     cv::Mat current_mirror_mask_raw_;
     cv::Mat current_mirror_mask_;

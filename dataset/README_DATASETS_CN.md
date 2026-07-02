@@ -28,20 +28,21 @@ evaluation_tools/configs/benchmark_plan.yaml
 /tf_static
 ```
 
-当前已经可用的 prototype bag：
+当前已经可用的完整自采转换 bag：
 
 ```text
-dataset/rosbag2/2026-03-30-21-31-03_rescued
+dataset/rosbag2/2026-03-30-21-31-03
 ```
 
 检查：
 
 ```bash
 source /opt/ros/humble/setup.bash
-ros2 bag info dataset/rosbag2/2026-03-30-21-31-03_rescued
+ros2 bag info dataset/rosbag2/2026-03-30-21-31-03
 ```
 
-该 bag 由旧 `.bag` 顺序扫描抢救得到，适合 pipeline validation，不建议作为论文唯一主序列。
+该 bag 由旧 ROS1 `.bag` 转换得到，包含 Ouster LiDAR/IMU、ZED 左右目图像和 ZED odom。
+它可以作为第一条主实验序列，但不建议作为论文唯一主序列。
 
 正式论文建议重新采集 3 到 5 条原生 ROS2 bag：
 
@@ -110,4 +111,3 @@ RPE Rotation
 Failure Rate
 Runtime
 ```
-

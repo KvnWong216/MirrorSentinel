@@ -28,8 +28,6 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 WS_ROOT = REPO_ROOT / "Sentinal-LIO_ws"
 DEFAULT_PARAMS = WS_ROOT / "src/sentinel_lio/config/sentinel_ouster.yaml"
 FIXED_PCD = WS_ROOT / "src/sentinel_lio/PCD/scans.pcd"
-DEFAULT_VFM_MODEL_ROOT = WS_ROOT / "models/Fast-FoundationStereo"
-DEFAULT_VFM_ENGINE_DIR = DEFAULT_VFM_MODEL_ROOT / "output_trt1011"
 
 
 METHOD_OVERRIDES: Dict[str, Dict[str, object]] = {
@@ -263,12 +261,64 @@ def collect_mapping_metric_row(label: str, map_path: Path, metrics_path: Path) -
         "behind_plane_point_count": aggregate.get("behind_plane_point_count"),
         "ghost_rate": aggregate.get("ghost_rate"),
         "reflective_plane_thickness_p95_mean_m": aggregate.get("reflective_plane_thickness_p95_mean_m"),
+        "reflection_residual_points": aggregate.get("reflection_residual_points"),
+        "reflection_residual_rate": aggregate.get("reflection_residual_rate"),
+        "reflection_residual_density_m3": aggregate.get("reflection_residual_density_m3"),
+        "valid_structure_precision_proxy": aggregate.get("valid_structure_precision_proxy"),
+        "reflective_plane_thickness_p95_m": aggregate.get("reflective_plane_thickness_p95_m"),
     }
+
+
+def add_ablation_relative_metrics(rows: List[Dict[str, object]]) -> None:
+    raw = next((row for row in rows if row.get("label") == "raw"), None)
+    if raw is None:
+        return
+
+    def as_float(row: Dict[str, object], key: str) -> Optional[float]:
+        value = row.get(key)
+        if isinstance(value, (float, int)):
+            return float(value)
+        if value is None:
+            return None
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    raw_residual = as_float(raw, "reflection_residual_points")
+    if raw_residual is None:
+        raw_residual = as_float(raw, "behind_plane_point_count")
+    raw_points = as_float(raw, "point_count")
+    raw_thickness = as_float(raw, "reflective_plane_thickness_p95_m")
+    if raw_thickness is None:
+        raw_thickness = as_float(raw, "reflective_plane_thickness_p95_mean_m")
+
+    for row in rows:
+        residual = as_float(row, "reflection_residual_points")
+        if residual is None:
+            residual = as_float(row, "behind_plane_point_count")
+        points = as_float(row, "point_count")
+        thickness = as_float(row, "reflective_plane_thickness_p95_m")
+        if thickness is None:
+            thickness = as_float(row, "reflective_plane_thickness_p95_mean_m")
+
+        row["reflection_removal_rate_vs_raw"] = (
+            max(0.0, (raw_residual - residual) / raw_residual)
+            if raw_residual and residual is not None
+            else None
+        )
+        row["map_retention_rate_vs_raw"] = points / raw_points if raw_points and points is not None else None
+        row["thickness_reduction_rate_vs_raw"] = (
+            max(0.0, (raw_thickness - thickness) / raw_thickness)
+            if raw_thickness and thickness is not None
+            else None
+        )
 
 
 def write_mapping_ablation_summary(result_dir: Path, rows: List[Dict[str, object]]) -> None:
     if not rows:
         return
+    add_ablation_relative_metrics(rows)
     json_path = result_dir / "metrics_mapping_ablation.json"
     csv_path = result_dir / "metrics_mapping_ablation.csv"
     md_path = result_dir / "metrics_mapping_ablation.md"
@@ -277,34 +327,92 @@ def write_mapping_ablation_summary(result_dir: Path, rows: List[Dict[str, object
         "label",
         "map",
         "point_count",
+        "map_retention_rate_vs_raw",
         "reflective_roi_point_count",
+        "reflection_residual_points",
+        "reflection_residual_rate",
+        "reflection_removal_rate_vs_raw",
+        "valid_structure_precision_proxy",
+        "reflective_plane_thickness_p95_m",
+        "thickness_reduction_rate_vs_raw",
         "behind_plane_point_count",
         "ghost_rate",
         "reflective_plane_thickness_p95_mean_m",
     ]
+    for key in sorted({key for row in rows for key in row.keys()}):
+        if key not in fieldnames:
+            fieldnames.append(key)
     with csv_path.open("w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         for row in rows:
             writer.writerow(row)
     with md_path.open("w", encoding="utf-8") as f:
-        f.write("| label | points | ROI | behind | ghost_rate | thickness_p95_m | map |\n")
-        f.write("|---|---:|---:|---:|---:|---:|---|\n")
+        f.write(
+            "| label | points | retained | ROI | residual | residual_rate | removal_vs_raw | "
+            "valid_precision | thickness_p95_m | map |\n"
+        )
+        f.write("|---|---:|---:|---:|---:|---:|---:|---:|---:|---|\n")
         for row in rows:
-            ghost_rate = row.get("ghost_rate")
-            thickness = row.get("reflective_plane_thickness_p95_mean_m")
+            retained = row.get("map_retention_rate_vs_raw")
+            residual_rate = row.get("reflection_residual_rate", row.get("ghost_rate"))
+            removal = row.get("reflection_removal_rate_vs_raw")
+            valid_precision = row.get("valid_structure_precision_proxy")
+            thickness = row.get("reflective_plane_thickness_p95_m", row.get("reflective_plane_thickness_p95_mean_m"))
             f.write(
-                "| {label} | {point_count} | {roi} | {behind} | {ghost} | {thickness} | {map} |\n".format(
+                "| {label} | {point_count} | {retained} | {roi} | {residual} | {residual_rate} | "
+                "{removal} | {valid_precision} | {thickness} | {map} |\n".format(
                     label=row.get("label"),
                     point_count=row.get("point_count"),
+                    retained=f"{retained:.3f}" if isinstance(retained, (float, int)) else retained,
                     roi=row.get("reflective_roi_point_count"),
-                    behind=row.get("behind_plane_point_count"),
-                    ghost=f"{ghost_rate:.6f}" if isinstance(ghost_rate, (float, int)) else ghost_rate,
+                    residual=row.get("reflection_residual_points", row.get("behind_plane_point_count")),
+                    residual_rate=f"{residual_rate:.6f}" if isinstance(residual_rate, (float, int)) else residual_rate,
+                    removal=f"{removal:.6f}" if isinstance(removal, (float, int)) else removal,
+                    valid_precision=f"{valid_precision:.6f}" if isinstance(valid_precision, (float, int)) else valid_precision,
                     thickness=f"{thickness:.6f}" if isinstance(thickness, (float, int)) else thickness,
                     map=row.get("map"),
                 )
             )
     print(f"wrote mapping ablation summary: {md_path}")
+
+
+def write_runtime_metrics(
+    result_dir: Path,
+    *,
+    topic_counts: Dict[str, int],
+    play_wall_time_s: float,
+    play_rate: float,
+) -> Dict[str, object]:
+    def fps(topic: str) -> float:
+        return float(topic_counts.get(topic, 0)) / play_wall_time_s if play_wall_time_s > 0.0 else 0.0
+
+    metrics: Dict[str, object] = {
+        "play_wall_time_s": float(play_wall_time_s),
+        "requested_play_rate": float(play_rate),
+        "cloud_registered_frames": int(topic_counts.get("/cloud_registered", 0)),
+        "odometry_frames": int(topic_counts.get("/Odometry", 0)),
+        "frame_stats_frames": int(topic_counts.get("/mirror_sentinel/frame_stats", 0)),
+        "pipeline_cloud_fps": fps("/cloud_registered"),
+        "odometry_fps": fps("/Odometry"),
+        "frame_stats_fps": fps("/mirror_sentinel/frame_stats"),
+        "depth_prior_fps": fps("/vfm/depth_image"),
+        "reflection_prior_fps": fps("/vfm/mirror_mask"),
+    }
+    json_path = result_dir / "metrics_runtime.json"
+    csv_path = result_dir / "metrics_runtime.csv"
+    json_path.write_text(json.dumps(metrics, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    with csv_path.open("w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=list(metrics.keys()))
+        writer.writeheader()
+        writer.writerow(metrics)
+    print(
+        "Runtime/FPS: "
+        f"cloud={metrics['pipeline_cloud_fps']:.3f} Hz, "
+        f"odom={metrics['odometry_fps']:.3f} Hz, "
+        f"wall={play_wall_time_s:.3f}s"
+    )
+    return metrics
 
 
 def count_rosbag2_topics(bag_dir: Path) -> Dict[str, int]:
@@ -331,7 +439,7 @@ def validate_topic_counts(args: argparse.Namespace, counts: Dict[str, int]) -> L
     warnings: List[str] = []
     if counts.get("/Odometry", 0) == 0:
         warnings.append("missing /Odometry; SLAM did not publish trajectory")
-    if args.run_vfm or args.run_da3_depth or args.prior_bag:
+    if args.run_da3_depth or args.prior_bag:
         if counts.get("/vfm/depth_image", 0) == 0:
             warnings.append("missing /vfm/depth_image; requested depth publisher did not produce output")
     if args.run_reflection_mask or args.run_mask_prior or args.prior_bag:
@@ -369,21 +477,27 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--rviz-config", type=Path, default=None, help="optional custom RViz config")
     parser.add_argument("--skip-map-eval", action="store_true")
     parser.add_argument("--skip-no-gt-eval", action="store_true")
-    parser.add_argument("--run-vfm", action="store_true", help="enable FastStereoFoundation VFM node")
-    parser.add_argument(
-        "--vfm-onnx-dir",
-        type=Path,
-        default=None,
-        help="directory containing TensorRT engines and onnx.yaml for the VFM node",
-    )
     parser.add_argument("--vfm-target-fps", type=float, default=10.0)
-    parser.add_argument("--vfm-sync-queue-size", type=int, default=3)
     parser.add_argument("--vfm-stats-log-interval", type=float, default=5.0)
     parser.add_argument("--run-da3-depth", action="store_true", help="enable monocular DA3 depth publisher")
     parser.add_argument("--run-reflection-mask", action="store_true", help="enable learned RGB/DA3 reflection mask publisher")
     parser.add_argument("--da3-backend", default="none", choices=["none", "heuristic", "module", "torchscript", "onnx"])
-    parser.add_argument("--da3-model", default="")
-    parser.add_argument("--da3-checkpoint", default="")
+    parser.add_argument(
+        "--da3-model",
+        default="",
+        help=(
+            "module backend spec, e.g. "
+            "depth_anything_3.api:DepthAnything3 for official Depth Anything 3"
+        ),
+    )
+    parser.add_argument(
+        "--da3-checkpoint",
+        default="",
+        help=(
+            "checkpoint/model id. For official DA3 module backend use a HuggingFace id such as "
+            "depth-anything/DA3Metric-Large"
+        ),
+    )
     parser.add_argument("--da3-input-width", type=int, default=518)
     parser.add_argument("--da3-input-height", type=int, default=518)
     parser.add_argument("--da3-metric-scale", type=float, default=1.0)
@@ -460,11 +574,9 @@ def main() -> int:
         raise SystemExit(f"bag not found: {args.bag}")
     if args.prior_bag and not args.prior_bag.exists():
         raise SystemExit(f"prior bag not found: {args.prior_bag}")
-    if args.run_vfm and args.run_da3_depth:
-        raise SystemExit("--run-vfm and --run-da3-depth both publish /vfm/depth_image; enable only one")
-    if args.prior_bag and (args.run_vfm or args.run_da3_depth or args.run_reflection_mask or args.run_mask_prior):
+    if args.prior_bag and (args.run_da3_depth or args.run_reflection_mask or args.run_mask_prior):
         raise SystemExit(
-            "--prior-bag already publishes /vfm priors; do not combine it with VFM/DA3/reflection/mask prior publishers"
+            "--prior-bag already publishes /vfm priors; do not combine it with DA3/reflection/mask prior publishers"
         )
     if args.run_reflection_mask and args.reflection_mask_backend in ("torch", "model") and not args.reflection_mask_checkpoint:
         raise SystemExit("--run-reflection-mask with torch/model backend requires --reflection-mask-checkpoint")
@@ -476,9 +588,11 @@ def main() -> int:
     params_file = make_params_file(args.params_base, result_dir / "params.yaml", args.method)
     env = shell_env()
     env["ROS_LOG_DIR"] = str(result_dir / "ros_logs")
-    if args.run_vfm or args.run_da3_depth or args.run_reflection_mask:
+    if args.run_da3_depth or args.run_reflection_mask:
         env.setdefault("SENTINEL_LIO_CONDA_SH", str(Path.home() / "anaconda3/etc/profile.d/conda.sh"))
         env.setdefault("SENTINEL_LIO_CONDA_ENV", "MirrSLAM_rtdepth")
+    if args.run_da3_depth:
+        env.setdefault("HF_ENDPOINT", "https://huggingface.co")
 
     safe_unlink_or_backup(FIXED_PCD, result_dir / "old_pcd_backups")
 
@@ -486,26 +600,15 @@ def main() -> int:
     if output_bag.exists():
         shutil.rmtree(output_bag)
 
-    vfm_onnx_dir = args.vfm_onnx_dir
-    if vfm_onnx_dir is None and DEFAULT_VFM_ENGINE_DIR.exists():
-        vfm_onnx_dir = DEFAULT_VFM_ENGINE_DIR
-    if vfm_onnx_dir is None:
-        vfm_onnx_dir = DEFAULT_VFM_MODEL_ROOT / "output"
-
     launch_args = [
         "ros2 launch sentinel_lio run_sentinel_ouster.launch.py",
         f"params_file:={params_file}",
         f"rviz:={'true' if args.rviz else 'false'}",
-        f"enable_vfm:={'true' if args.run_vfm else 'false'}",
         f"enable_da3_depth:={'true' if args.run_da3_depth else 'false'}",
         f"enable_reflection_mask:={'true' if args.run_reflection_mask else 'false'}",
-        f"vfm_model_root:={DEFAULT_VFM_MODEL_ROOT}",
-        f"vfm_onnx_dir:={vfm_onnx_dir}",
-        "vfm_mask_mode:=none",
         f"mask_prior_mode:={args.mask_mode}",
         f"mask_prior_target_fps:={args.mask_prior_target_fps}",
         f"vfm_target_fps:={args.vfm_target_fps}",
-        f"vfm_sync_queue_size:={args.vfm_sync_queue_size}",
         f"vfm_stats_log_interval:={args.vfm_stats_log_interval}",
         f"da3_backend:={args.da3_backend}",
         f"da3_input_width:={args.da3_input_width}",
@@ -559,8 +662,10 @@ def main() -> int:
     record_proc = ros_shell(record_cmd, env)
     time.sleep(2.0)
     prior_play_proc = ros_shell(prior_play_cmd, env) if prior_play_cmd else None
+    play_start_time = time.time()
     play_proc = ros_shell(play_cmd, env)
     play_code = wait_for_bag_play(play_proc, args.timeout)
+    play_wall_time_s = max(0.0, time.time() - play_start_time)
     prior_play_code = None
     if prior_play_proc:
         prior_play_code = wait_for_bag_play(prior_play_proc, max(1, args.timeout))
@@ -607,8 +712,15 @@ def main() -> int:
         shutil.copy2(map_marker_clean_path, map_raw_path)
         print(f"warning: raw accumulated map missing; copied marker-clean map as fallback -> {map_raw_path}")
 
+    runtime_metrics: Dict[str, object] = {}
     if output_bag.exists():
         topic_counts = count_rosbag2_topics(output_bag)
+        runtime_metrics = write_runtime_metrics(
+            result_dir,
+            topic_counts=topic_counts,
+            play_wall_time_s=play_wall_time_s,
+            play_rate=args.play_rate,
+        )
         topic_warnings = validate_topic_counts(args, topic_counts)
         for warning in topic_warnings:
             print(f"warning: {warning}")
@@ -853,6 +965,7 @@ def main() -> int:
         "prior_play_return_code": prior_play_code,
         "topic_counts": topic_counts if output_bag.exists() else {},
         "topic_warnings": (topic_warnings + frame_stats_warnings) if output_bag.exists() else [],
+        "runtime_metrics": runtime_metrics,
         "frame_prior_post_clean": str(frame_prior_post_clean_dir) if frame_prior_post_clean_dir else None,
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
     }

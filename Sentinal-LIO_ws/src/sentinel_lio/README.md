@@ -35,7 +35,7 @@ env -u CONDA_PREFIX -u CONDA_DEFAULT_ENV -u CONDA_EXE -u CONDA_PYTHON_EXE \
   CMAKE_PREFIX_PATH=/opt/ros/humble \
   LD_LIBRARY_PATH=/opt/ros/humble/opt/rviz_ogre_vendor/lib:/opt/ros/humble/lib/x86_64-linux-gnu:/opt/ros/humble/lib \
   /usr/bin/bash -lc 'source /opt/ros/humble/setup.bash && colcon build \
-    --symlink-install --packages-select sentinel_lio fast_foundation_stereo_ros \
+    --symlink-install --packages-select sentinel_lio mirrorsentinel_visual_prior \
     --cmake-args -DPython3_EXECUTABLE=/usr/bin/python3 -DPYTHON_EXECUTABLE=/usr/bin/python3 \
     -DBoost_DIR=/usr/lib/x86_64-linux-gnu/cmake/Boost-1.74.0 \
     -DOpenCV_DIR=/usr/lib/x86_64-linux-gnu/cmake/opencv4 \
@@ -74,12 +74,16 @@ cd <MirrorSentinel>
 scripts/mirrorsentinel_play_bag.sh
 ```
 
-Enable the Fast-FoundationStereo TensorRT depth node after engine files exist:
+Enable the DA3 monocular depth prior after the DA3 environment is ready:
 
 ```bash
 export SENTINEL_LIO_CONDA_SH=~/anaconda3/etc/profile.d/conda.sh
-export SENTINEL_LIO_CONDA_ENV=Sentinel-LIO
-ROS_LOG_DIR=/tmp/ros2_launch_log ros2 launch sentinel_lio run_sentinel_ouster.launch.py enable_vfm:=true
+export SENTINEL_LIO_CONDA_ENV=MirrSLAM_rtdepth
+ROS_LOG_DIR=/tmp/ros2_launch_log ros2 launch sentinel_lio run_sentinel_ouster.launch.py \
+  enable_da3_depth:=true \
+  da3_backend:=module \
+  da3_model:=depth_anything_3.api:DepthAnything3 \
+  da3_checkpoint:=depth-anything/DA3Metric-Large
 ```
 
 ## 3DRef Mask Prior Smoke Test
@@ -98,7 +102,7 @@ ros2 launch sentinel_lio run_sentinel_ouster.launch.py \
   mask_match_tolerance:=0.001
 ```
 
-For ablation, use `mask_mode:=zeros` to publish an all-zero mask on the same topic. Do not enable both `enable_vfm:=true` and `enable_mask_prior:=true` with the same `mask_topic` unless you intentionally want two mask publishers.
+For ablation, use `mask_mode:=zeros` to publish an all-zero mask on the same topic. Do not enable both `enable_reflection_mask:=true` and `enable_mask_prior:=true` with the same `mask_topic` unless you intentionally want two mask publishers.
 
 If `rclpy._rclpy_pybind11` fails to import, you are probably running ROS2 with Anaconda's `python3`. Start from a clean shell or use the clean environment shown in this README's build section.
 

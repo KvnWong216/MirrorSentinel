@@ -1,97 +1,151 @@
-# ROBIO 投稿前 TODO 清单
+# ROBIO 冲刺 TODO
 
-## A. 必须完成
+目标很明确：MirrorSentinel 要证明的是 ROS2 Humble 在线 SLAM 中对镜子/玻璃鬼影点的稳定拒绝能力，而不是单纯做反射分割。当前仓库已经能完成 full bag 回放、建图、点云导出、人工房间边界评估和 oracle 上限评估；官方 DA3 metric depth 已经接入 ROS2 并跑出 depth-only 主候选结果。
 
-- [ ] 确认 ROS 运行环境。当前仓库是 ROS1/catkin 风格，launch 和 wrapper 写的是 Noetic；当前机器只有 `/opt/ros/humble`。需要准备 ROS1 Noetic 环境，或把系统完整迁到 ROS2。
-- [ ] 修掉视觉节点绝对路径。`vfm_stereo_node.py` 和 `vfm_stereo_node_wrapper.sh` 里仍有 `/home/zjt/yugong_slam`、`/home/zjt/miniconda3`。
-- [ ] 补 `/vfm/mirror_mask` 生成链路。主 LIO 已订阅 mask，但当前 stereo node 只发布 `/vfm/depth_image`。
-- [ ] 给 `dataset/rosbag/2026-03-30-21-31-03.bag` 建立 metadata：场景、传感器、时长、topic、外参、是否有真值。
-- [ ] 准备至少 3 条有 ground truth 的非朗伯序列：镜面、玻璃、混合反光/弱纹理。
-- [ ] 用 `evaluation_tools/tum_trajectory_eval.py` 产出 ATE/RPE 表。
-- [ ] 用 `evaluation_tools/mirror_segmentation_eval.py` 产出反射 mask 或点级反射检测表。
-- [ ] 完成消融：无 mask、无 depth prior、硬删除点、软 confidence weighting、full model。
-- [ ] 完成与 FAST-LIO2、LIO-SAM、LVI-SAM/R3LIVE 的对比。
-- [ ] 整理 runtime：平均处理时间、最大处理时间、帧率、GPU/CPU 配置、显存占用。
+## 0. 当前状态
 
-## B. 论文实验图表
+- [x] ROS2 Humble 工程已可构建：`scripts/build_ros2.sh`
+- [x] 完整自采 ROS1 bag 已转换为 ROS2 bag：`dataset/rosbag2/2026-03-30-21-31-03`
+- [x] 手工房间 cuboid / 镜面墙边界标注已存在：`evaluation_tools/data/annotations/self_collected/2026-03-30-21-31-03_rescued.yaml`
+- [x] 手工几何 reference map 已存在：`evaluation_tools/data/gt_reference/self_collected/2026-03-30-21-31-03_rescued/room_gt_reference.pcd`
+- [x] FAST-LIO2-equivalent baseline 已跑通并评估
+- [x] Manual geometry clean oracle 已跑通并评估
+- [x] Heuristic `/vfm/depth_image` + `/vfm/mirror_mask` smoke test 已跑通
+- [x] 真实 DA3 depth prior 已部署并跑通 ROS2 `/vfm/depth_image`
+- [ ] 真实 reflection/mirror mask prior 资产缺失
+- [x] DA3 depth-only `sentinel_rt_depth` 主候选结果已跑出
+- [ ] `sentinel_full` depth+mask 完整变体结果缺失，但不再阻塞 depth-only 主线
 
-- [ ] 主结果表：各序列 ATE RMSE / RPE translational / RPE rotational。
-- [ ] 消融表：证明视觉深度先验和 mirror mask 各自有效。
-- [ ] 反射检测表：mirror/glass/other-reflective/all-reflective 的 IoU、F1、precision、recall。
-- [ ] 地图质量图：同一场景中 FAST-LIO2 与 Sentinel-LIO 的 ghost points、墙体重复、反射伪结构对比。
-- [ ] 轨迹图：top-down trajectory overlay，包含 ground truth、baseline、ours。
-- [ ] 定性图：RGB、mask、depth、weighted point cloud、final map 五联图。
-- [ ] 失败案例图：mask 漏检、强反射过曝、深度模型 hallucination、外参误差导致的误筛。
+每日刷新状态：
 
-## C. 方法叙事需要补强
+```bash
+python3 evaluation_tools/mirrorsentinel_sprint_report.py
+```
 
-- [ ] 明确定义问题：非朗伯表面导致 LiDAR ghost points 和 scan-to-map residual 被污染。
-- [ ] 明确本文贡献：
-  - [ ] 一种视觉基础模型辅助的 mirror-aware LIO 框架。
-  - [ ] 一种 depth-mask consistency 的点级置信度分配策略。
-  - [ ] 一种软权重残差进入 ESKF/scan-to-map update 的实现。
-  - [ ] 面向反射场景的 benchmark/数据与消融验证。
-- [ ] 给出关键公式：
-  - [ ] LiDAR 点投影到相机。
-  - [ ] LiDAR range 与 visual depth 的一致性残差。
-  - [ ] mask/boundary/depth-validity 到 confidence 的映射。
-  - [ ] confidence 对 point-to-plane residual 和 Jacobian 的加权方式。
-- [ ] 把 `MirrorSentinel.hpp` 中已有逻辑写成论文算法框。
-- [ ] 给出复杂度和实时性分析。
+输出目录：
 
-## D. 工程复现
+```text
+evaluation_tools/results/slam/self_collected/2026-03-30-21-31-03_research_sprint/
+```
 
-- [ ] 写根目录 README：安装、模型权重、TensorRT engine、运行 launch、评测命令。
-- [ ] 提供 `requirements.txt` 或 conda `environment.yml`。
-- [ ] 提供 `scripts/run_benchmark.sh`，一键跑某条 bag 并导出结果。
-- [ ] 提供 `configs/` 中每条实验序列的外参和 topic mapping。
-- [ ] 固定随机种子与模型版本。
-- [ ] 保存每次实验的 commit/hash、参数 YAML、日志和输出 JSON。
+## 1. 三天出结果
 
-## E. 当前仓库中最应优先修的文件
+### Day 1：锁主结果来源
 
-- [ ] `Sentinal-LIO_ws/src/fast_foundation_stereo_ros/scripts/vfm_stereo_node.py`
-  - 绝对路径。
-  - topic 写死。
-  - 没有 mirror mask output。
-  - 缺少参数化 baseline、engine path、model path。
+- [x] 找回或重新生成真实 `/vfm/depth_image`，不能再用 heuristic 当主方法。
+- [ ] `/vfm/mirror_mask` 作为可选增强，不再阻塞第一版主实验。
+- [ ] 如果找到历史 prior bag，用 `--prior-bag` 跑 `sentinel_full`。
+- [ ] 如果只有模型权重/engine，跑实时节点生成 prior 并记录 outputs_bag。
+- [ ] 产出 `sentinel_full` 的三份图：
+  - `map_raw.pcd`
+  - `map_marker_clean.pcd`
+  - `map_vote_clean.pcd`
+- [ ] 产出主方法指标：
+  - `metrics_mapping_ablation.{json,csv,md}`
+  - `metrics_runtime.{json,csv}`
+  - `metrics_no_gt.json`
+  - `metrics_reference_map_vote_clean.json`
 
-- [ ] `Sentinal-LIO_ws/src/fast_foundation_stereo_ros/scripts/vfm_stereo_node_wrapper.sh`
-  - 绝对路径。
-  - ROS/conda 环境写死。
-  - `LD_PRELOAD` 写死 libffi 版本。
+主方法命令模板：
 
-- [ ] `Sentinal-LIO_ws/src/sentinel_lio/launch/run_sentinel_ouster.launch`
-  - 默认启动 RViz，不适合 batch benchmark。
-  - 默认启动 VFM 节点，不利于做 ablation。
-  - 需要增加 `run_vfm`、`run_rviz`、`record_outputs` 等开关。
+```bash
+python3 evaluation_tools/run_ros2_slam_eval.py \
+  --bag dataset/rosbag2/2026-03-30-21-31-03 \
+  --prior-bag <REAL_VFM_OUTPUTS_BAG> \
+  --sequence 2026-03-30-21-31-03_fullbag_mirrorsentinel_real_prior \
+  --method sentinel_full \
+  --annotation evaluation_tools/data/annotations/self_collected/2026-03-30-21-31-03_rescued.yaml \
+  --play-rate 1.0 \
+  --startup-wait 5 \
+  --shutdown-wait 10 \
+  --timeout 180 \
+  --frame-prior-post-clean \
+  --frame-prior-frame-stride 5 \
+  --frame-prior-max-pair-dt 0.30 \
+  --frame-prior-selection-mode annotation_score_budget \
+  --frame-prior-target-kept-points 100000 \
+  --frame-prior-score-mode ghost_votes_ratio \
+  --frame-prior-annotation-candidate-mode behind \
+  --frame-prior-annotation-budget-weight candidate_count \
+  --frame-prior-min-observations 1 \
+  --frame-prior-min-ghost-votes 1 \
+  --frame-prior-min-ghost-ratio 0.0
+```
 
-- [ ] `Sentinal-LIO_ws/src/sentinel_lio/config/sentinel_ouster.yaml`
-  - 外参需要标明坐标系定义。
-  - baseline 参数缺失，但 stereo node 会读取 `/sentinel/baseline`。
-  - 需要为每条序列单独保存配置，避免覆盖。
+### Day 2：补消融
 
-- [ ] `evaluation_tools/`
-  - 已补 ATE/RPE 和 3DRef 风格指标。
-  - 仍需补地图 ghost metric 和 batch runner。
+- [ ] `fast_lio2_equiv`：同代码公平 baseline。
+- [ ] `sentinel_no_mask`：只用 depth consistency。
+- [ ] `sentinel_no_depth`：只用 reflection mask。
+- [ ] `sentinel_hard_reject`：硬剔除策略。
+- [ ] `sentinel_full`：完整 soft weighting + backend historical cleanup。
+- [ ] 所有方法必须使用同一 bag、同一 annotation、同一 reference map。
 
-## F. 投稿前判断标准
+论文主表只放 4 到 6 个指标：
 
-可以进入写作定稿的最低标准：
+```text
+Method | RER ↓ | Removal vs Raw ↑ | Valid Precision Proxy ↑ | Thickness P95 ↓ | Map Retention ↑ | FPS ↑
+```
 
-- [ ] 至少 3 条非朗伯序列，且每条有真值或可辩护的 reference trajectory。
-- [ ] 主方法在多数序列上 ATE/RPE 优于 FAST-LIO2 和 LIO-SAM。
-- [ ] 消融能证明 full model 明显优于 no-mask/no-depth。
-- [ ] mask 或点级反射检测有定量结果，不只展示可视化。
-- [ ] runtime 仍接近在线，不是离线慢处理。
-- [ ] 失败案例被诚实呈现，并有合理解释。
+### Day 3：补泛化和图
 
-如果只剩很少时间，优先顺序是：
+- [ ] 至少补 1 条额外自采 mirror/glass ROS2 bag，优先电梯外/走廊玻璃。
+- [ ] 或者补 3DRef 上游 prior 辅助表：IoU、F1、Precision、Recall、FPS。
+- [ ] 生成图：
+  - baseline vs ours top-view map
+  - reflective ROI ghost focus
+  - residual distance histogram
+  - ablation bar chart
+  - RViz pipeline screenshot
 
-1. 跑通 ROS1 环境与 `/Odometry` 导出。
-2. 拿到 ground truth 并出 ATE/RPE。
-3. 补 `/vfm/mirror_mask`。
-4. 做 full/no-mask/no-depth 消融。
-5. 做 baseline 对比。
-6. 画地图和轨迹图。
-7. 最后才是大规模 polish。
+## 2. 一周写完论文
+
+### Day 1：定题和协议
+
+- [ ] 题目暂定：MirrorSentinel: Visual-Prior Assisted LiDAR-Inertial Mapping for Mirror/Glass Ghost Suppression。
+- [ ] 明确本文不是 segmentation paper，而是 reflection-aware SLAM mapping paper。
+- [ ] 固定评估协议：`SLAM_EVAL_PROTOCOL_CN.md`。
+
+### Day 2：方法
+
+- [ ] 写系统图：LiDAR/IMU + image prior + point projection + consistency voting + map cleanup。
+- [ ] 写关键公式：
+  - LiDAR 点投影到相机。
+  - LiDAR range 与 visual depth 的残差。
+  - mask/depth validity 到 point confidence。
+  - historical votes 到 `map_vote_clean.pcd`。
+
+### Day 3：实验设置
+
+- [ ] 写传感器、ROS2 Humble、Ouster/ZED、外参、bag 时长、topic。
+- [ ] 写人工 cuboid reference 的可信边界：manual geometric reference，不是 scanner-grade GT。
+
+### Day 4：主结果和消融
+
+- [ ] 主表：baseline/main/oracle/smoke test 分清角色。
+- [ ] 消融表：no-mask/no-depth/hard/full。
+- [ ] runtime 表：pipeline FPS、depth/mask prior FPS。
+
+### Day 5：相关工作
+
+- [ ] Non-Lambertian / mirror / glass SLAM。
+- [ ] Reflection point removal / 3DRef。
+- [ ] Foundation depth / video reconstruction prior。
+- [ ] SLAM map quality evaluation：MapEval、ETH3D/Tanks-and-Temples 风格 cloud-to-reference。
+
+### Day 6：图和讨论
+
+- [ ] 定性图必须展示 SLAM 地图鬼影减少，而不是只展示 RGB mask。
+- [ ] 失败案例：外参误差、prior 漏检、强反射、过度清理。
+- [ ] 局限性：当前自采 reference 是 manual geometric reference。
+
+### Day 7：定稿
+
+- [ ] 摘要、贡献、结论统一措辞。
+- [ ] 检查所有 claims 都有对应实验。
+- [ ] README 一键复现实验命令更新。
+- [ ] 大文件不进 GitHub。
+
+## 3. 今晚最重要的判断
+
+现在不能把 heuristic prior 结果写成主方法。它只证明 ROS2 topic 和 pipeline 运行正常。论文能不能成立，取决于三天内是否拿到真实 visual prior 下的 `sentinel_full` 结果，并且至少在 RER / Thickness P95 / FPS 上相对 `fast_lio2_equiv` 有可辩护提升。

@@ -40,14 +40,19 @@ evaluation_tools/results/slam/self_collected/<sequence>/<method>/
 Primary main-task metrics:
 
 ```text
-Ghost Rate
-Behind-Plane Point Count
+Reflection Removal Rate or Removal vs Raw
+Reflection Residual Rate
+Valid Structure Precision / Indoor Precision
 Plane Thickness P95
-Loop Drift / Drift Ratio when the route is closed
-Runtime / Hz
+Map Retention Rate
+Pipeline FPS / Hz
 ```
 
-These metrics are defined in `SLAM_EVAL_PROTOCOL_CN.md`. The mirror/glass ghost metrics are the reflective-ROI specialization of reconstruction precision/outlier metrics, not a segmentation score.
+These metrics are defined in `SLAM_EVAL_PROTOCOL_CN.md`.  The mirror/glass
+metrics are aligned with 3DRef / reflection LiDAR SLAM reflection-removal
+protocols and with SLAM map / 3D reconstruction map-quality metrics.  They are
+not reported as a pure segmentation score; IoU/F1 on 3DRef are auxiliary prior
+metrics only.
 
 ## 2. Trajectory Evaluation
 
@@ -86,7 +91,7 @@ python3 evaluation_tools/ros2_bag_to_tum.py \
 
 For Sentinel-LIO runs, use the recorded `/Odometry` topic instead.
 
-## 3. Map Ghost/Thickness Evaluation
+## 3. Map Reflection-Removal/Thickness Evaluation
 
 After a method saves `map.pcd`, evaluate reflective-plane ghost points and local map thickness:
 
@@ -101,6 +106,26 @@ python3 evaluation_tools/map_ghost_eval.py \
 The annotation YAML must define `reflective_planes` and optional `planar_regions`.
 See `SLAM_EVAL_PROTOCOL_CN.md` and the placeholder annotation under
 `evaluation_tools/data/annotations/self_collected/`.
+
+The evaluator keeps legacy fields such as `ghost_rate` for older logs, but new
+paper-facing JSON fields are:
+
+```text
+reflection_residual_points
+reflection_residual_rate
+reflection_residual_density_m3
+valid_structure_precision_proxy
+reflective_plane_thickness_p95_m
+```
+
+When raw/marker-clean/vote-clean maps are evaluated together, the runner also
+writes relative ablation fields:
+
+```text
+reflection_removal_rate_vs_raw
+map_retention_rate_vs_raw
+thickness_reduction_rate_vs_raw
+```
 
 For elevator-like scenes where nearly all walls are mirror/glass, annotate the
 room cuboid boundary instead of semantic mirror ROIs. Pick the four floor
@@ -189,6 +214,69 @@ python3 evaluation_tools/annotation_helper.py inspect \
   --output-dir evaluation_tools/results/annotation_preview/2026-03-30-21-31-03_fastlio2/room_bounds_manual_inspect
 ```
 
+### Manual Cuboid Reference Map
+
+If a room is close to a cuboid, create a stronger geometric reference map from
+the same four floor corners and `z_min/z_max`.  This is useful for local
+MapEval/ETH3D-style map-quality evidence, but it must be described as a manual
+geometric reference, not scanner-grade GT.
+
+Interactive mode:
+
+```bash
+python3 evaluation_tools/room_gt_annotator.py \
+  --map evaluation_tools/results/slam/self_collected/<sequence>/<method>/map_raw.pcd \
+  --z-min -0.3 --z-max 2.2 \
+  --sequence <sequence> \
+  --bag dataset/rosbag2/<sequence> \
+  --map-frame camera_init \
+  --spacing 0.03 \
+  --include-floor-ceiling \
+  --output-dir evaluation_tools/data/gt_reference/self_collected/<sequence>
+```
+
+Reproducible non-interactive mode:
+
+```bash
+python3 evaluation_tools/room_gt_annotator.py \
+  --corners 3.715335 0.388164 1.360079 0.574105 1.205127 -0.820455 3.653355 -1.083872 \
+  --z-min -0.3 --z-max 2.2 \
+  --sequence 2026-03-30-21-31-03_rescued \
+  --bag dataset/rosbag2/2026-03-30-21-31-03_rescued \
+  --map-frame camera_init \
+  --spacing 0.03 \
+  --include-floor-ceiling \
+  --output-dir evaluation_tools/data/gt_reference/self_collected/2026-03-30-21-31-03_rescued
+```
+
+Outputs:
+
+```text
+room_gt_annotation.yaml      # usable by map_ghost_eval.py
+room_gt_reference.pcd        # dense six-face reference cloud
+room_gt_mesh.ply             # cuboid mesh
+room_gt_face_labels.npy      # face id per reference point
+gt_top_view.png / gt_xz_view.png
+```
+
+If a high-end scanner reference is available, prefer it for global
+accuracy/completeness.  The manual cuboid reference is the lightweight fallback
+for mirror elevators and rectangular rooms.
+
+Evaluate a SLAM map against the reference cloud:
+
+```bash
+python3 evaluation_tools/reference_map_eval.py \
+  --map evaluation_tools/results/slam/self_collected/<sequence>/<method>/map_vote_clean.pcd \
+  --reference evaluation_tools/data/gt_reference/self_collected/<sequence>/room_gt_reference.pcd \
+  --thresholds-m 0.05,0.10,0.20 \
+  --output-json evaluation_tools/results/slam/self_collected/<sequence>/<method>/metrics_reference_map.json \
+  --output-csv evaluation_tools/results/slam/self_collected/<sequence>/<method>/metrics_reference_map.csv
+```
+
+This reports map-to-reference precision/accuracy, reference-to-map
+completeness/recall, and F-score at each threshold.
+
 ## 4. One-Command ROS2 Bag Pipeline
 
 The preferred MirrorSentinel MVP entry point is:
@@ -207,6 +295,9 @@ python3 evaluation_tools/mirrorsentinel_run_pipeline.py --rviz
 This wrapper runs Sentinel-LIO on one ROS2 bag, records outputs, collects
 `map_raw.pcd` / `map_marker_clean.pcd` / `map_vote_clean.pcd`, exports
 `/Odometry` to TUM, and runs the available map/trajectory evaluators.
+It also writes `metrics_runtime.json` with `/cloud_registered`, `/Odometry`,
+`/vfm/depth_image`, and `/vfm/mirror_mask` FPS measured from the recorded output
+bag.
 
 The lower-level runner is still available for baselines and ablations:
 
@@ -221,6 +312,37 @@ python3 evaluation_tools/run_ros2_slam_eval.py \
 
 Use `--method fast_lio2_equiv`, `sentinel_no_mask`, `sentinel_no_depth`, or
 `sentinel_hard_reject` for ablations on the same bag.
+
+## 5. 3DRef-Style Point Filtering Metrics
+
+For official 3DRef-style point labels, use segmentation IoU/F1 only for the
+upstream prior:
+
+```bash
+python3 evaluation_tools/mirror_segmentation_eval.py semantickitti \
+  --gt-dir dataset/public/3DRef/labels \
+  --pred-dir evaluation_tools/results/3dref/predictions/labels \
+  --positive-labels 2,3,4,5 \
+  --output-json evaluation_tools/results/3dref/eval/prior_semantic.json
+```
+
+For the SLAM/map-cleaning question, evaluate whether the kept map points removed
+3DRef label `5` reflection/virtual points while retaining indoor structure:
+
+```bash
+python3 evaluation_tools/reflection_removal_eval.py \
+  --labels dataset/public/3DRef/labels/000000.label \
+  --kept evaluation_tools/results/3dref/kept_indices/000000.npy \
+  --output-json evaluation_tools/results/3dref/eval/removal_000000.json \
+  --output-csv evaluation_tools/results/3dref/eval/removal_000000.csv
+```
+
+Default labels follow 3DRef:
+
+```text
+reflection / virtual points: 5
+indoor retained structure: 1,2,3,4,6
+```
 
 The current recommended MirrorSentinel backend is geometry-constrained
 historical-prior map reintegration. It exports the three paper ablation maps:

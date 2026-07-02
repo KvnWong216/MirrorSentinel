@@ -7,7 +7,7 @@
 从仓库组织和运行入口来看，这不是一个单一算法脚本仓库，而是一个完整的研究型系统工程，包含以下三条主线：
 
 1. 在线运行主线：以 `sentinel_lio` 为核心，完成 LiDAR-IMU 预处理、状态估计、地图维护和结果发布。
-2. 感知增强主线：以 `fast_foundation_stereo_ros` 为核心，提供立体深度估计，并为镜面区域筛查提供视觉侧证据。
+2. 感知增强主线：以 `mirrorsentinel_visual_prior` 为核心，提供 DA3 单目深度先验，并为镜面/玻璃区域筛查提供视觉侧证据。
 3. 评测验证主线：以 `evaluation_tools` 和 `baselines` 为核心，形成“方法实现 + 基线对比 + 指标评估”的闭环。
 
 这意味着项目的目标并不只是“跑通一个 SLAM 节点”，而是构建一个可验证、可比较、可扩展的退化场景鲁棒定位建图研究平台。
@@ -18,7 +18,7 @@
 
 | 目录 | 角色 | 说明 |
 | --- | --- | --- |
-| `Sentinal-LIO_ws/` | 主工作空间 | 在线系统主体，包含 `sentinel_lio` 与立体深度 ROS 封装 |
+| `Sentinal-LIO_ws/` | 主工作空间 | 在线系统主体，包含 `sentinel_lio` 与视觉先验 ROS 封装 |
 | `baselines/` | 对比方法区 | 收纳 FAST-LIO、LIO-SAM、LVI-SAM、R3LIVE 等基线相关工作区或依赖 |
 | `evaluation_tools/` | 评测工具区 | 轨迹记录、批量评估、地图结构指标与结果汇总 |
 | `dataset/` | 数据区 | rosbag 与实验数据输入位置 |
@@ -62,14 +62,15 @@
 
 ### 3.3 视觉感知增强层
 
-`fast_foundation_stereo_ros` 负责把 Foundation Stereo / TensorRT 推理能力封装成一个独立 ROS 节点。其核心职责是：
+`mirrorsentinel_visual_prior` 负责把 DA3 深度、可选反射 mask 和目录 mask prior 封装成独立 ROS 节点。其核心职责是：
 
-1. 订阅左右目图像
-2. 执行立体匹配推理
-3. 生成深度图
-4. 通过 ROS 话题向主建图系统提供视觉几何先验
+1. 订阅 RGB 图像
+2. 执行 DA3 单目 metric depth 推理
+3. 发布 `/vfm/depth_image`
+4. 可选发布 learned/reflection directory mask 到 `/vfm/mirror_mask`
+5. 通过 ROS 话题向主建图系统提供视觉几何先验
 
-该模块采用单独脚本和 wrapper 运行方式，并依赖 Conda 环境与 TensorRT 引擎。这种组织方式体现出一个非常明确的设计思想：将“高依赖、重运行时环境”的视觉推理链路与“高稳定、低时延”的 LIO 主链路解耦。这样做的好处是：
+该模块采用单独 Python 节点运行方式，并依赖独立 Conda/DA3 环境。这种组织方式体现出一个非常明确的设计思想：将“高依赖、重运行时环境”的视觉推理链路与“高稳定、低时延”的 LIO 主链路解耦。这样做的好处是：
 
 1. 视觉模型可以独立迭代，不破坏主建图程序的编译与部署逻辑。
 2. 推理侧环境管理与 ROS/C++ 主程序隔离，便于迁移和调试。
@@ -202,7 +203,7 @@ LiDAR + IMU
 | `Preprocess` | 异构 LiDAR 数据适配与扫描组织 | 传感器入口 |
 | `ImuProcess` | IMU 去畸变、预测与融合准备 | 状态估计前端 |
 | `MirrorSentinel` | 镜面区域理解、点级可信度调制 | 感知增强桥接层 |
-| `fast_foundation_stereo_ros` | 双目深度推理 ROS 封装 | 视觉增强子系统 |
+| `mirrorsentinel_visual_prior` | DA3 深度和反射 mask prior ROS 封装 | 视觉增强子系统 |
 | `evaluation_tools` | 轨迹记录、指标计算、批量评测 | 离线分析层 |
 | `baselines` | 对照算法与比较环境 | 研究验证层 |
 

@@ -199,11 +199,9 @@ ghost_rate = number of mapped points behind annotated reflective plane / total p
 
 1. `evaluation_tools/` 原本为空，说明之前还没有真正可复现实验闭环。
 2. 根目录原 `BENCHMARK_REPORT_CN.md` 文件内容已经被 NUL 字节覆盖，我已重写。
-3. `Sentinal-LIO_ws/src/fast_foundation_stereo_ros/scripts/vfm_stereo_node.py` 和 wrapper 中仍有 `/home/zjt/...` 绝对路径。
-4. wrapper 里写死 `/opt/ros/noetic`，但当前机器只有 `/opt/ros/humble`。
-5. 当前 `vfm_stereo_node.py` 只发布 `/vfm/depth_image`，没有发布 `/vfm/mirror_mask`；但 Sentinel-LIO 主节点会订阅 `/vfm/mirror_mask`。
-6. 自采 rosbag 有没有 ground truth 还没确认，因为本机没有 ROS1 `rosbag` 工具。
-7. `MirrorSentinel_paper.tex` 还只是草稿模板，不满足 ROBIO 完整论文要求。
+3. 当前视觉上游已切换到 `mirrorsentinel_visual_prior` 的 DA3 单目深度 prior；旧双目深度 wrapper 不再是论文主线。
+4. 自采 rosbag 没有动捕 ground truth，因此轨迹只能写 no-GT loop/revisit consistency，不能写成 ATE。
+5. `MirrorSentinel_paper.tex` 还只是草稿模板，不满足 ROBIO 完整论文要求。
 
 ## 6. 最小可投稿实验闭环
 

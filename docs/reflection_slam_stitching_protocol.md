@@ -8,7 +8,7 @@ model, but to make mirror/glass priors usable for real-time SLAM map cleaning.
 
 - Reflection ROI / mask: 3DRef-style RGB reflection masks, SATNet/EBLNet outputs,
   or an oracle directory mask for controlled self-collected experiments.
-- Depth prior: FastStereoFoundation / DA3-style depth publisher on
+- Depth prior: DA3 / Depth Anything style monocular metric-depth publisher on
   `/vfm/depth_image`.
 - Optional future priors: Mirror3D-style mirror plane/depth refinement or
   ClearGrasp/TransCG-style transparent-object depth completion.

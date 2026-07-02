@@ -1,0 +1,31 @@
+{
+  "face_labels": "evaluation_tools/data/gt_reference/self_collected/2026-03-30-21-31-03_rescued/room_gt_face_labels.npy",
+  "floor_corners_xy_ccw": [
+    [
+      1.236117657054482,
+      -0.882435422357772
+    ],
+    [
+      3.6378597623314004,
+      -1.037386525924024
+    ],
+    [
+      3.7308304244711525,
+      0.37266851652887567
+    ],
+    [
+      1.344583429550859,
+      0.5431147304517534
+    ]
+  ],
+  "mesh_ply": "evaluation_tools/data/gt_reference/self_collected/2026-03-30-21-31-03_rescued/room_gt_mesh.ply",
+  "point_count": 22185,
+  "quality": "manual cuboid geometric reference; not laser-scanner GT",
+  "reference_pcd": "evaluation_tools/data/gt_reference/self_collected/2026-03-30-21-31-03_rescued/room_gt_reference.pcd",
+  "spacing_m": 0.03,
+  "yaml": "evaluation_tools/data/gt_reference/self_collected/2026-03-30-21-31-03_rescued/room_gt_annotation.yaml",
+  "z": [
+    -0.3,
+    2.2
+  ]
+}

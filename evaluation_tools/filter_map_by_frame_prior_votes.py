@@ -97,6 +97,7 @@ def read_bag_frames(
     odom_topic: str,
     depth_topic: str,
     mask_topic: str,
+    require_mask: bool,
     use_bag_time: bool,
     depth_time_offset: float,
     mask_time_offset: float,
@@ -111,9 +112,12 @@ def read_bag_frames(
     masks: List[Tuple[float, np.ndarray]] = []
 
     with AnyReader([bag], default_typestore=typestore) as reader:
-        wanted = {odom_topic, depth_topic, mask_topic}
+        wanted = {odom_topic, depth_topic}
+        if require_mask:
+            wanted.add(mask_topic)
         connections = [conn for conn in reader.connections if conn.topic in wanted]
-        if len({conn.topic for conn in connections}) != len(wanted):
+        found_topics = {conn.topic for conn in connections}
+        if not wanted.issubset(found_topics):
             available = ", ".join(sorted({conn.topic for conn in reader.connections}))
             raise ValueError(f"missing required topics. Available topics: {available}")
         for conn, timestamp_ns, rawdata in reader.messages(connections=connections):
@@ -135,7 +139,7 @@ def read_bag_frames(
                 mask = image_to_numpy(msg)
                 masks.append((stamp + mask_time_offset, mask.astype(np.uint8, copy=False)))
 
-    if not odoms or not depths or not masks:
+    if not odoms or not depths or (require_mask and not masks):
         raise ValueError(f"bag {bag} does not contain enough odom/depth/mask messages")
 
     depth_times = [x[0] for x in depths]
@@ -145,15 +149,22 @@ def read_bag_frames(
         if frame_stride > 1 and frame_idx % frame_stride != 0:
             continue
         depth_idx = nearest_index(depth_times, stamp)
-        mask_idx = nearest_index(mask_times, stamp)
         depth_dt = abs(depth_times[depth_idx] - stamp)
-        mask_dt = abs(mask_times[mask_idx] - stamp)
+        if require_mask:
+            mask_idx = nearest_index(mask_times, stamp)
+            mask_dt = abs(mask_times[mask_idx] - stamp)
+        else:
+            mask_idx = -1
+            mask_dt = 0.0
         if depth_dt > max_pair_dt or mask_dt > max_pair_dt:
             continue
         depth = depths[depth_idx][1]
-        mask = masks[mask_idx][1]
-        if mask.shape != depth.shape:
-            raise ValueError(f"mask/depth shape mismatch: {mask.shape} vs {depth.shape}")
+        if require_mask:
+            mask = masks[mask_idx][1]
+            if mask.shape != depth.shape:
+                raise ValueError(f"mask/depth shape mismatch: {mask.shape} vs {depth.shape}")
+        else:
+            mask = np.full(depth.shape, 255, dtype=np.uint8)
         frames.append(PriorFrame(stamp, position, rotation_wb, depth, mask > mask_threshold))
         if max_frames is not None and len(frames) >= max_frames:
             break
@@ -698,6 +709,7 @@ def main() -> int:
         odom_topic=args.odom_topic,
         depth_topic=args.depth_topic,
         mask_topic=args.mask_topic,
+        require_mask=not args.no_require_mask,
         use_bag_time=args.use_bag_time,
         depth_time_offset=args.depth_time_offset,
         mask_time_offset=args.mask_time_offset,

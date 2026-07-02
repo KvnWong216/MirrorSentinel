@@ -561,8 +561,13 @@ def evaluate_reflective_plane(points: np.ndarray, plane: PlaneAnnotation) -> Dic
             "behind_plane_point_count": float(np.count_nonzero(behind)),
             "ghost_rate": safe_div(float(np.count_nonzero(behind)), float(roi_points.shape[0])),
             "behind_plane_density": safe_div(float(np.count_nonzero(behind)), volume),
+            "reflection_residual_points": float(np.count_nonzero(behind)),
+            "reflection_residual_rate": safe_div(float(np.count_nonzero(behind)), float(roi_points.shape[0])),
+            "reflection_residual_density_m3": safe_div(float(np.count_nonzero(behind)), volume),
         }
 
+    residual_points = float(np.count_nonzero(behind_any))
+    residual_rate = safe_div(residual_points, float(roi_points.shape[0]))
     result: Dict[str, Any] = {
         "id": plane.region_id,
         "type": plane.plane_type,
@@ -573,6 +578,11 @@ def evaluate_reflective_plane(points: np.ndarray, plane: PlaneAnnotation) -> Dic
         "behind_plane_point_count": float(np.count_nonzero(behind_any)),
         "ghost_rate": safe_div(float(np.count_nonzero(behind_any)), float(roi_points.shape[0])),
         "behind_plane_density": safe_div(float(np.count_nonzero(behind_any)), volume),
+        "reflection_residual_points": residual_points,
+        "reflection_residual_rate": residual_rate,
+        "reflection_residual_density_m3": safe_div(residual_points, volume),
+        "valid_roi_point_count": float(roi_points.shape[0]) - residual_points,
+        "valid_roi_ratio": 1.0 - residual_rate if roi_points.shape[0] else 0.0,
         "ghost_distance_m": stats(behind_dist),
         "plane_abs_distance_m": stats(abs_dist),
         "thresholds": threshold_rows,
@@ -606,9 +616,15 @@ def evaluate_planar_region(points: np.ndarray, plane: PlaneAnnotation) -> Dict[s
     }
 
 
-def aggregate_results(reflective: Sequence[Dict[str, Any]], planar: Sequence[Dict[str, Any]]) -> Dict[str, Any]:
+def aggregate_results(
+    reflective: Sequence[Dict[str, Any]],
+    planar: Sequence[Dict[str, Any]],
+    *,
+    map_point_count: float,
+) -> Dict[str, Any]:
     total_reflective_points = sum(float(x["roi_point_count"]) for x in reflective)
     total_behind = sum(float(x["behind_plane_point_count"]) for x in reflective)
+    total_reflective_volume = sum(float(x["roi_volume_m3"]) for x in reflective)
     ghost_rates = [float(x["ghost_rate"]) for x in reflective if float(x["roi_point_count"]) > 0.0]
     reflective_p95 = [
         x["plane_abs_distance_m"]["p95"]
@@ -620,6 +636,8 @@ def aggregate_results(reflective: Sequence[Dict[str, Any]], planar: Sequence[Dic
         for x in planar
         if x["plane_abs_distance_m"]["p95"] is not None
     ]
+    residual_rate = safe_div(total_behind, total_reflective_points)
+    valid_structure_points = max(0.0, float(map_point_count) - total_behind)
     return {
         "reflective_region_count": float(len(reflective)),
         "planar_region_count": float(len(planar)),
@@ -629,6 +647,15 @@ def aggregate_results(reflective: Sequence[Dict[str, Any]], planar: Sequence[Dic
         "ghost_rate_mean_per_region": finite_or_none(float(np.mean(ghost_rates))) if ghost_rates else None,
         "reflective_plane_thickness_p95_mean_m": finite_or_none(float(np.mean(reflective_p95))) if reflective_p95 else None,
         "planar_thickness_p95_mean_m": finite_or_none(float(np.mean(planar_p95))) if planar_p95 else None,
+        # Paper-facing names.  The legacy ghost/behind fields above are kept so
+        # older experiment logs and plotting scripts remain readable.
+        "reflection_residual_points": total_behind,
+        "reflection_residual_rate": residual_rate,
+        "reflection_residual_rate_mean_per_region": finite_or_none(float(np.mean(ghost_rates))) if ghost_rates else None,
+        "reflection_residual_density_m3": safe_div(total_behind, total_reflective_volume),
+        "reflective_plane_thickness_p95_m": finite_or_none(float(np.mean(reflective_p95))) if reflective_p95 else None,
+        "valid_structure_point_count": valid_structure_points,
+        "valid_structure_precision_proxy": safe_div(valid_structure_points, float(map_point_count)),
     }
 
 
@@ -696,17 +723,17 @@ def main() -> int:
         "sequence": annotation_meta.get("sequence"),
         "map_frame": annotation_meta.get("map_frame"),
         "point_count": float(points.shape[0]),
-        "aggregate": aggregate_results(reflective_results, planar_results),
+        "aggregate": aggregate_results(reflective_results, planar_results, map_point_count=float(points.shape[0])),
         "reflective_planes": reflective_results,
         "planar_regions": planar_results,
     }
     write_outputs(args.output_json, args.output_csv, result)
     agg = result["aggregate"]
     print(
-        "Ghost/behind/thickness: "
-        f"{agg['ghost_rate']:.6f}, "
-        f"{agg['behind_plane_point_count']:.0f}, "
-        f"{agg['reflective_plane_thickness_p95_mean_m']}"
+        "Reflection residual / valid precision / thickness: "
+        f"{agg['reflection_residual_rate']:.6f}, "
+        f"{agg['valid_structure_precision_proxy']:.6f}, "
+        f"{agg['reflective_plane_thickness_p95_m']}"
     )
     print(f"wrote: {args.output_json}")
     return 0
